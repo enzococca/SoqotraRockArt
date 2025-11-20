@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Map View - Soqotra Rock Art{% endblock %}
+
+{% block extra_head %}
+<style>
+    #map {
+        height: calc(100vh - 200px);
+        min-height: 500px;
+        width: 100%;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .map-controls {
+        padding: 1rem;
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2><i class="bi bi-map"></i> Rock Art Map (Simple)</h2>
+
+            <div class="map-controls">
+                <div id="mapInfo" class="text-muted">
+                    <i class="bi bi-info-circle"></i> Map initialized (no COG)
+                </div>
+            </div>
+
+            <div id="map"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Load Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Initialize map -->
+<script>
+    console.log('Starting map initialization...');
+
+    try {
+        // Initialize map
+        var map = L.map('map').setView([12.5, 54.0], 13);
+        console.log('Map created');
+
+        // Add base tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap',
+            maxZoom: 19
+        }).addTo(map);
+        console.log('Base tiles added');
+
+        document.getElementById('mapInfo').innerHTML = '<i class="bi bi-check-circle"></i> Map loaded successfully';
+
+        // Load points
+        console.log('Fetching points...');
+        fetch('/api/points')
+            .then(r => {
+                console.log('Points response:', r.status);
+                return r.json();
+            })
+            .then(geojson => {
+                console.log('Points loaded:', geojson.features.length);
+                L.geoJSON(geojson, {
+                    onEachFeature: function(feature, layer) {
+                        const p = feature.properties;
+                        layer.bindPopup(`
+                            <h6>${p.motif}</h6>
+                            <div><strong>Site:</strong> ${p.site}</div>
+                            <div><strong>Type:</strong> ${p.type || 'N/A'}</div>
+                            <a href="/record/${p.id}" class="btn btn-sm btn-primary mt-2">View</a>
+                        `);
+                    }
+                }).addTo(map);
+                document.getElementById('mapInfo').innerHTML = '<i class="bi bi-check-circle"></i> Map loaded with ' + geojson.features.length + ' points';
+            })
+            .catch(err => {
+                console.error('Error loading points:', err);
+                document.getElementById('mapInfo').innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error loading points';
+            });
+
+    } catch(err) {
+        console.error('Map initialization error:', err);
+        document.getElementById('mapInfo').innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error: ' + err.message;
+    }
+</script>
+{% endblock %}

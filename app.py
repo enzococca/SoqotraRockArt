@@ -1119,6 +1119,13 @@ def map_view():
     return render_template('map.html', title='Map View')
 
 
+@app.route('/map-simple')
+@login_required
+def map_simple():
+    """Display simple map without COG (for debugging)."""
+    return render_template('map_simple.html', title='Map View (Simple)')
+
+
 @app.route('/api/cog-url')
 def get_cog_url():
     """Return COG URL from Dropbox."""
