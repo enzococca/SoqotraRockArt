@@ -1178,6 +1178,71 @@ def get_points():
     return jsonify(geojson)
 
 
+@app.route('/api/cog-proxy')
+def cog_proxy():
+    """Proxy COG requests from Dropbox to bypass CORS issues."""
+    import requests
+    from flask import Response, request as flask_request
+
+    cog_url = os.getenv('DROPBOX_COG_URL')
+    if not cog_url:
+        return jsonify({'error': 'COG URL not configured'}), 500
+
+    # Get range header from client request (for COG byte-range requests)
+    range_header = flask_request.headers.get('Range')
+
+    headers = {}
+    if range_header:
+        headers['Range'] = range_header
+
+    try:
+        # Stream from Dropbox
+        response = requests.get(cog_url, headers=headers, stream=True, timeout=30)
+
+        # Create response with CORS headers
+        def generate():
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    yield chunk
+
+        flask_response = Response(
+            generate(),
+            status=response.status_code,
+            content_type=response.headers.get('Content-Type', 'image/tiff')
+        )
+
+        # Add CORS headers
+        flask_response.headers['Access-Control-Allow-Origin'] = '*'
+        flask_response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        flask_response.headers['Access-Control-Allow-Headers'] = 'Range'
+        flask_response.headers['Access-Control-Expose-Headers'] = 'Content-Range, Content-Length, Accept-Ranges'
+
+        # Copy important headers from Dropbox response
+        if 'Content-Range' in response.headers:
+            flask_response.headers['Content-Range'] = response.headers['Content-Range']
+        if 'Content-Length' in response.headers:
+            flask_response.headers['Content-Length'] = response.headers['Content-Length']
+        if 'Accept-Ranges' in response.headers:
+            flask_response.headers['Accept-Ranges'] = response.headers['Accept-Ranges']
+
+        return flask_response
+
+    except Exception as e:
+        print(f"Error proxying COG: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/cog-proxy', methods=['OPTIONS'])
+def cog_proxy_options():
+    """Handle CORS preflight for COG proxy."""
+    from flask import Response
+    response = Response()
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Range'
+    return response
+
+
 # ============================================================================
 # INITIALIZATION
 # ============================================================================

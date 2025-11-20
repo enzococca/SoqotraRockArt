@@ -79,31 +79,25 @@
     const loading = document.getElementById('loadingIndicator');
     const mapInfo = document.getElementById('mapInfo');
 
-    fetch('/api/cog-url')
-        .then(r => r.json())
-        .then(data => {
-            if (data.error) {
-                mapInfo.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Orthophoto not available';
-                loading.style.display = 'none';
-                return;
-            }
+    // Use proxy endpoint to bypass CORS
+    const cogProxyUrl = '/api/cog-proxy';
 
-            parseGeoraster(data.url).then(georaster => {
-                var layer = new GeoRasterLayer({
-                    georaster: georaster,
-                    opacity: 0.8,
-                    resolution: 256
-                });
-                layer.addTo(map);
-                map.fitBounds(layer.getBounds());
-                mapInfo.innerHTML = '<i class="bi bi-check-circle"></i> Orthophoto loaded';
-                loading.style.display = 'none';
-            }).catch(err => {
-                console.error('COG error:', err);
-                mapInfo.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error loading orthophoto';
-                loading.style.display = 'none';
-            });
+    parseGeoraster(cogProxyUrl).then(georaster => {
+        console.log('COG loaded successfully:', georaster);
+        var layer = new GeoRasterLayer({
+            georaster: georaster,
+            opacity: 0.8,
+            resolution: 256
         });
+        layer.addTo(map);
+        map.fitBounds(layer.getBounds());
+        mapInfo.innerHTML = '<i class="bi bi-check-circle"></i> Orthophoto loaded';
+        loading.style.display = 'none';
+    }).catch(err => {
+        console.error('COG error:', err);
+        mapInfo.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error loading orthophoto: ' + err.message;
+        loading.style.display = 'none';
+    });
 
     fetch('/api/points')
         .then(r => r.json())
