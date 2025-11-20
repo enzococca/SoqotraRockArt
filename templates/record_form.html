@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - Soqotra Rock Art Database{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('records') }}">Records</a></li>
+                {% if record %}
+                <li class="breadcrumb-item"><a href="{{ url_for('record_detail', record_id=record.id) }}">{{ record.site }} - {{ record.motif }}</a></li>
+                <li class="breadcrumb-item active">Edit</li>
+                {% else %}
+                <li class="breadcrumb-item active">New Record</li>
+                {% endif %}
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">
+                    <i class="bi bi-{{ 'pencil' if record else 'plus-circle' }}"></i> {{ title }}
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="row">
+                        <!-- Site -->
+                        <div class="col-md-4 mb-3">
+                            {{ form.site.label(class="form-label") }}
+                            <span class="text-danger">*</span>
+                            {{ form.site(class="form-control " + ("is-invalid" if form.site.errors else "")) }}
+                            {% if form.site.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.site.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Motif -->
+                        <div class="col-md-4 mb-3">
+                            {{ form.motif.label(class="form-label") }}
+                            <span class="text-danger">*</span>
+                            {{ form.motif(class="form-control " + ("is-invalid" if form.motif.errors else "")) }}
+                            {% if form.motif.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.motif.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Panel -->
+                        <div class="col-md-4 mb-3">
+                            {{ form.panel.label(class="form-label") }}
+                            {{ form.panel(class="form-control " + ("is-invalid" if form.panel.errors else "")) }}
+                            {% if form.panel.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.panel.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Groups -->
+                        <div class="col-md-4 mb-3">
+                            {{ form.groups.label(class="form-label") }}
+                            {{ form.groups(class="form-control " + ("is-invalid" if form.groups.errors else "")) }}
+                            {% if form.groups.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.groups.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Type -->
+                        <div class="col-md-4 mb-3">
+                            {{ form.type.label(class="form-label") }}
+                            {{ form.type(class="form-control " + ("is-invalid" if form.type.errors else ""), id="typeSelect") }}
+                            {% if form.type.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.type.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Date -->
+                        <div class="col-md-4 mb-3">
+                            {{ form.date.label(class="form-label") }}
+                            {{ form.date(class="form-control " + ("is-invalid" if form.date.errors else "")) }}
+                            {% if form.date.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.date.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Latitude -->
+                        <div class="col-md-6 mb-3">
+                            {{ form.latitude.label(class="form-label") }}
+                            {{ form.latitude(class="form-control " + ("is-invalid" if form.latitude.errors else ""), placeholder="e.g., 12.5") }}
+                            {% if form.latitude.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.latitude.errors[0] }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Decimal degrees (e.g., 12.5)</div>
+                        </div>
+
+                        <!-- Longitude -->
+                        <div class="col-md-6 mb-3">
+                            {{ form.longitude.label(class="form-label") }}
+                            {{ form.longitude(class="form-control " + ("is-invalid" if form.longitude.errors else ""), placeholder="e.g., 54.0") }}
+                            {% if form.longitude.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.longitude.errors[0] }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Decimal degrees (e.g., 54.0)</div>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control " + ("is-invalid" if form.description.errors else ""), rows=5, id="descriptionField") }}
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.description.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('record_detail', record_id=record.id) if record else url_for('records') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Auto-fill description when type is selected
+document.getElementById('typeSelect').addEventListener('change', function() {
+    const typeName = this.value;
+    if (typeName) {
+        fetch(`/api/types/${encodeURIComponent(typeName)}/description`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.description) {
+                    document.getElementById('descriptionField').value = data.description;
+                }
+            })
+            .catch(error => console.error('Error fetching description:', error));
+    }
+});
+</script>
+{% endblock %}

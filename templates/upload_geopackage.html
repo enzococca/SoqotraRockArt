@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Upload GeoPackage - Soqotra Rock Art Database{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('map_view') }}">Map</a></li>
+                <li class="breadcrumb-item active">Upload GeoPackage</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">
+                    <i class="bi bi-geo-alt"></i> Upload GeoPackage File
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h5><i class="bi bi-info-circle"></i> What is a GeoPackage?</h5>
+                    <p>A GeoPackage (.gpkg) is a geospatial file format that contains location data (points, lines, polygons) with associated attributes.</p>
+                    <p class="mb-0"><strong>Expected fields:</strong> PtID or motif, site (optional), and point geometry with coordinates.</p>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-4">
+                        <label for="file" class="form-label"><strong>Select GeoPackage File</strong></label>
+                        <input type="file" class="form-control" id="file" name="file" accept=".gpkg" required>
+                        <div class="form-text">Only .gpkg files are accepted</div>
+                    </div>
+
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h6><i class="bi bi-lightbulb"></i> Import Behavior:</h6>
+                            <ul class="mb-0">
+                                <li><strong>Existing records:</strong> Coordinates will be updated based on PtID/motif match</li>
+                                <li><strong>New records:</strong> Will be created with site, motif, and coordinates</li>
+                                <li><strong>Missing PtID:</strong> Points without PtID/motif field will be skipped</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('map_view') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload"></i> Upload and Import
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-question-circle"></i> How to Create a GeoPackage</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Using QGIS:</strong></p>
+                <ol>
+                    <li>Open QGIS and create a new project</li>
+                    <li>Create a new point layer: Layer → Create Layer → New GeoPackage Layer</li>
+                    <li>Add attributes: PtID (text), site (text)</li>
+                    <li>Add points with coordinates</li>
+                    <li>Save and export as .gpkg file</li>
+                </ol>
+
+                <p class="mt-3"><strong>Field Mapping:</strong></p>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>GeoPackage Field</th>
+                            <th>Maps To</th>
+                            <th>Required</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>PtID</code> or <code>motif</code></td>
+                            <td>Motif</td>
+                            <td><span class="badge bg-danger">Yes</span></td>
+                        </tr>
+                        <tr>
+                            <td><code>site</code></td>
+                            <td>Site</td>
+                            <td><span class="badge bg-warning">Optional</span></td>
+                        </tr>
+                        <tr>
+                            <td>Point geometry</td>
+                            <td>Latitude/Longitude</td>
+                            <td><span class="badge bg-danger">Yes</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

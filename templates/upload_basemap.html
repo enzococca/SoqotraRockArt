@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Basemap - Soqotra Rock Art Database{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('map_view') }}">Map</a></li>
+                <li class="breadcrumb-item active">Upload Basemap</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">
+                    <i class="bi bi-map"></i> Upload Georeferenced Basemap
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h5><i class="bi bi-info-circle"></i> What is a basemap?</h5>
+                    <p>A basemap is a georeferenced image or raster that provides background context for your rock art points on the map.</p>
+                    <p class="mb-0"><strong>Supported formats:</strong> GeoTIFF (.tif), GeoPackage (.gpkg), JPG, PNG</p>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-4">
+                        <label for="file" class="form-label"><strong>Select Basemap File</strong></label>
+                        <input type="file" class="form-control" id="file" name="file"
+                               accept=".tif,.tiff,.gpkg,.jpg,.jpeg,.png" required>
+                        <div class="form-text">
+                            Formats: .tif (GeoTIFF), .gpkg (GeoPackage), .jpg, .png
+                        </div>
+                    </div>
+
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h6><i class="bi bi-lightbulb"></i> Recommended:</h6>
+                            <ul class="mb-0">
+                                <li><strong>GeoTIFF (.tif)</strong> - Best option for georeferenced satellite/aerial imagery</li>
+                                <li><strong>Coordinate System:</strong> Should be in WGS84 (EPSG:4326) for web display</li>
+                                <li><strong>Coverage:</strong> Should cover Soqotra Island area (approx 12°-12.8°N, 53.2°-54.5°E)</li>
+                                <li><strong>File size:</strong> Compress large files for faster loading</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> <strong>Note:</strong>
+                        <ul class="mb-0">
+                            <li>The file will be saved as the default basemap</li>
+                            <li>Any existing basemap will be backed up automatically</li>
+                            <li>For web display, the map uses OpenStreetMap by default</li>
+                            <li>GeoTIFF files require georeferencing information to display correctly</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('map_view') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-upload"></i> Upload Basemap
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- How to create GeoTIFF -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-question-circle"></i> How to Georeference an Image</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Using QGIS (Free):</strong></p>
+                <ol>
+                    <li>Open QGIS and your image file</li>
+                    <li>Go to: Raster → Georeferencer</li>
+                    <li>Add ground control points (GCPs) by matching image points to known coordinates</li>
+                    <li>Set transformation type (usually Polynomial 1 or Thin Plate Spline)</li>
+                    <li>Set target CRS to EPSG:4326 (WGS84)</li>
+                    <li>Click "Start Georeferencing"</li>
+                    <li>Save output as GeoTIFF</li>
+                </ol>
+
+                <p class="mt-3"><strong>Coordinate Reference:</strong></p>
+                <p>Soqotra Island approximate bounds:</p>
+                <ul>
+                    <li>North: 12.7° N</li>
+                    <li>South: 12.3° N</li>
+                    <li>East: 54.5° E</li>
+                    <li>West: 53.2° E</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

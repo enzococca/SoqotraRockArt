@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Print: {{ record.site }} - {{ record.motif }}</title>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { font-size: 12pt; }
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #0d6efd;
+            border-bottom: 3px solid #0d6efd;
+            padding-bottom: 10px;
+        }
+
+        .record-info {
+            margin: 20px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            width: 30%;
+        }
+
+        .description {
+            background: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #0d6efd;
+            margin: 20px 0;
+        }
+
+        .images {
+            margin: 30px 0;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .image-item {
+            text-align: center;
+            page-break-inside: avoid;
+        }
+
+        .image-item img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+        }
+
+        .image-caption {
+            font-size: 10pt;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .btn-print {
+            background: #0d6efd;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .btn-print:hover {
+            background: #0b5ed7;
+        }
+
+        @page {
+            margin: 2cm;
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <button class="btn-print" onclick="window.print()">🖨️ Print This Page</button>
+        <button class="btn-print" onclick="window.close()">✖ Close</button>
+    </div>
+
+    <h1>{{ record.site }} - {{ record.motif }}</h1>
+
+    <div class="record-info">
+        <table>
+            <tr>
+                <th>ID</th>
+                <td>{{ record.id }}</td>
+            </tr>
+            <tr>
+                <th>Site</th>
+                <td><strong>{{ record.site }}</strong></td>
+            </tr>
+            <tr>
+                <th>Motif</th>
+                <td><strong>{{ record.motif }}</strong></td>
+            </tr>
+            <tr>
+                <th>Panel</th>
+                <td>{{ record.panel or '-' }}</td>
+            </tr>
+            <tr>
+                <th>Groups</th>
+                <td>{{ record.groups or '-' }}</td>
+            </tr>
+            <tr>
+                <th>Type</th>
+                <td>{{ record.type or '-' }}</td>
+            </tr>
+            <tr>
+                <th>Date</th>
+                <td>{{ record.date.strftime('%Y-%m-%d') if record.date else '-' }}</td>
+            </tr>
+            {% if record.latitude and record.longitude %}
+            <tr>
+                <th>Coordinates</th>
+                <td>{{ "%.6f"|format(record.latitude) }}, {{ "%.6f"|format(record.longitude) }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <th>Created</th>
+                <td>{{ record.created_at.strftime('%Y-%m-%d %H:%M') if record.created_at else '-' }}</td>
+            </tr>
+            <tr>
+                <th>Last Updated</th>
+                <td>{{ record.updated_at.strftime('%Y-%m-%d %H:%M') if record.updated_at else '-' }}</td>
+            </tr>
+        </table>
+    </div>
+
+    {% if record.description %}
+    <div class="description">
+        <h3>Description</h3>
+        <p style="white-space: pre-wrap;">{{ record.description }}</p>
+    </div>
+    {% endif %}
+
+    {% if record.images %}
+    <div class="images">
+        <h2>Images ({{ record.images|length }})</h2>
+        <div class="image-grid">
+            {% for image in record.images %}
+            <div class="image-item">
+                <img src="{{ image.image_path|image_url }}"
+                     alt="{{ image.original_filename }}">
+                <div class="image-caption">{{ image.original_filename }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 10pt; color: #666; text-align: center;">
+        Soqotra Rock Art Database - Record #{{ record.id }}
+    </div>
+</body>
+</html>

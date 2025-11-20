@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Create Database - Soqotra Rock Art Database{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('list_databases') }}">Databases</a></li>
+                <li class="breadcrumb-item active">Create New</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">
+                    <i class="bi bi-database-add"></i> Create New Database
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h5><i class="bi bi-info-circle"></i> What does this do?</h5>
+                    <p>This will create a new empty SQLite database with the same schema as the current database. The new database will include:</p>
+                    <ul class="mb-0">
+                        <li>Users table (for authentication)</li>
+                        <li>Rock art records table</li>
+                        <li>Images table</li>
+                        <li>Type descriptions table</li>
+                    </ul>
+                </div>
+
+                <form method="POST">
+                    <div class="mb-4">
+                        <label for="db_name" class="form-label"><strong>Database Name</strong></label>
+                        <input type="text" class="form-control" id="db_name" name="db_name"
+                               placeholder="e.g., soqotra_2024" required>
+                        <div class="form-text">
+                            Use a descriptive name. The .db extension will be added automatically if not provided.
+                        </div>
+                    </div>
+
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h6><i class="bi bi-lightbulb"></i> Naming Suggestions:</h6>
+                            <ul class="mb-0">
+                                <li><code>soqotra_site1.db</code> - Database for a specific site</li>
+                                <li><code>fieldwork_2024.db</code> - Database for a specific campaign</li>
+                                <li><code>backup_20240120.db</code> - Backup database with date</li>
+                                <li><code>test_database.db</code> - Testing/development database</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> <strong>Note:</strong> The new database will be created empty. You'll need to:
+                        <ul class="mb-0">
+                            <li>Create a new admin user manually (or register through the app)</li>
+                            <li>Import type descriptions if needed</li>
+                            <li>Add records and images</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('list_databases') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-database-add"></i> Create Database
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- After Creation -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-question-circle"></i> After Creating the Database</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>To start using the new database:</strong></p>
+                <ol>
+                    <li>Update your <code>.env</code> file with the new database path:
+                        <pre class="bg-light p-2 mt-2"><code>DATABASE_URL=sqlite:///your_new_database.db</code></pre>
+                    </li>
+                    <li>Restart the Flask application</li>
+                    <li>Register a new admin user or create one using Flask shell:
+                        <pre class="bg-light p-2 mt-2"><code>flask shell
+>>> from models import User, db
+>>> user = User(username='admin', email='admin@example.com')
+>>> user.set_password('your_password')
+>>> db.session.add(user)
+>>> db.session.commit()</code></pre>
+                    </li>
+                    <li>Start adding records!</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

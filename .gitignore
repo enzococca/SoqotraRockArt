@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Flask
+instance/
+.webassets-cache
+
+# Environment variables
+.env
+.env.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+database_backups/
+
+# Logs
+*.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+._*
+Thumbs.db
+
+# Uploads (don't commit large files)
+static/uploads/originals/*.jpg
+static/uploads/originals/*.JPG
+static/uploads/originals/*.png
+static/uploads/originals/*.PNG
+static/uploads/thumbnails/*.jpg
+static/uploads/thumbnails/*.JPG
+
+# Basemaps (large files)
+static/basemaps/*.tif
+static/basemaps/*.gpkg
+
+# Keep directories but not content
+!static/uploads/.gitkeep
+!static/basemaps/.gitkeep
+
+# Temporary files
+*.tmp
+*.bak
+*.swp

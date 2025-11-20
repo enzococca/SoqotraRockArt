@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Database Management - Soqotra Rock Art Database{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1><i class="bi bi-database"></i> Database Management</h1>
+        <p class="text-muted">Manage multiple databases for different projects or sites</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('create_database') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Create New Database
+        </a>
+    </div>
+</div>
+
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> <strong>Note:</strong> Database switching is not implemented in the current version. To use a different database, update the DATABASE_URL environment variable and restart the application.
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Available Databases</h5>
+            </div>
+            <div class="card-body">
+                {% if databases %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Database Name</th>
+                                <th>Size</th>
+                                <th>Last Modified</th>
+                                <th>Path</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for db in databases %}
+                            <tr>
+                                <td>
+                                    <strong>{{ db.name }}</strong>
+                                    {% if 'rockart.db' in db.name %}
+                                    <span class="badge bg-success">Current</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ "%.2f"|format(db.size / 1024) }} KB</td>
+                                <td>{{ db.modified.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td><small class="text-muted">{{ db.path }}</small></td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        {% if 'rockart.db' not in db.name %}
+                                        <form method="POST" action="{{ url_for('switch_database') }}" style="display: inline;">
+                                            <input type="hidden" name="db_name" value="{{ db.name }}">
+                                            <button type="submit" class="btn btn-outline-success" title="Switch to this database"
+                                                    onclick="return confirm('Switch to {{ db.name }}? Current database will be backed up.');">
+                                                <i class="bi bi-arrow-repeat"></i> Switch
+                                            </button>
+                                        </form>
+                                        {% else %}
+                                        <button class="btn btn-success" disabled title="Current active database">
+                                            <i class="bi bi-check-circle"></i> Active
+                                        </button>
+                                        {% endif %}
+                                        <a href="{{ url_for('export_excel') }}" class="btn btn-outline-primary" title="Export to Excel">
+                                            <i class="bi bi-download"></i> Export
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-database" style="font-size: 4rem; color: #ccc;"></i>
+                    <p class="text-muted mt-3">No databases found</p>
+                    <a href="{{ url_for('create_database') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Create First Database
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Database Features -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-lightbulb"></i> Database Features</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li><i class="bi bi-check-circle text-success"></i> Create empty databases for new projects</li>
+                    <li><i class="bi bi-check-circle text-success"></i> Separate databases for different sites or campaigns</li>
+                    <li><i class="bi bi-check-circle text-success"></i> Export data to Excel with images</li>
+                    <li><i class="bi bi-check-circle text-success"></i> Import coordinates from GeoPackage files</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> How to Use</h5>
+            </div>
+            <div class="card-body">
+                <h6>Creating a Database:</h6>
+                <p>Click "Create New Database" to create an empty database with the same schema as the current one.</p>
+
+                <h6>Switching Databases:</h6>
+                <p>Currently requires manual configuration. Update the <code>DATABASE_URL</code> environment variable in your <code>.env</code> file:</p>
+                <pre class="bg-light p-2"><code>DATABASE_URL=sqlite:///your_database.db</code></pre>
+                <p class="mb-0"><small class="text-muted">Then restart the Flask application.</small></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

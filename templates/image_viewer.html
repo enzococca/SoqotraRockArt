@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block title %}Image Viewer - {{ record.site }} - {{ record.motif }}{% endblock %}
+
+{% block extra_head %}
+<style>
+/* Image viewer styles */
+.viewer-container {
+    position: relative;
+    width: 100%;
+    height: 80vh;
+    background: #000;
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.main-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    cursor: crosshair;
+}
+
+.magnifier {
+    position: absolute;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    cursor: none;
+    background-repeat: no-repeat;
+    background-color: #000;
+    box-shadow: 0 0 20px rgba(255,255,255,0.5);
+    pointer-events: none;
+    display: none;
+    z-index: 1000;
+}
+
+.controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    padding: 10px 20px;
+    border-radius: 25px;
+    z-index: 100;
+}
+
+.zoom-slider {
+    width: 200px;
+    margin: 0 10px;
+}
+
+.capture-area {
+    position: absolute;
+    border: 2px dashed #ff0;
+    background: rgba(255,255,0,0.1);
+    display: none;
+    pointer-events: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('records') }}">Records</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('record_detail', record_id=record.id) }}">{{ record.site }} - {{ record.motif }}</a></li>
+                <li class="breadcrumb-item active">Image Viewer</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-8">
+        <h3>{{ image.original_filename }}</h3>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="btn-group">
+            <button id="captureBtn" class="btn btn-primary">
+                <i class="bi bi-camera"></i> Capture Screenshot
+            </button>
+            <a href="{{ url_for('record_detail', record_id=record.id) }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Image Viewer -->
+<div class="viewer-container" id="viewerContainer">
+    <img src="{{ image.image_path|image_url }}"
+         class="main-image"
+         id="mainImage"
+         alt="{{ image.original_filename }}">
+    <div class="magnifier" id="magnifier"></div>
+    <div class="capture-area" id="captureArea"></div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <button class="btn btn-sm btn-light" id="zoomOut">
+            <i class="bi bi-zoom-out"></i>
+        </button>
+        <input type="range" class="zoom-slider" id="zoomSlider" min="1" max="10" value="3" step="0.5">
+        <button class="btn btn-sm btn-light" id="zoomIn">
+            <i class="bi bi-zoom-in"></i>
+        </button>
+        <span class="text-white ms-2" id="zoomLevel">3x</span>
+        <button class="btn btn-sm btn-light ms-3" id="toggleMagnifier">
+            <i class="bi bi-circle"></i> Magnifier: <span id="magnifierStatus">ON</span>
+        </button>
+    </div>
+</div>
+
+<!-- Instructions -->
+<div class="alert alert-info mt-3">
+    <h5><i class="bi bi-info-circle"></i> Instructions</h5>
+    <ul class="mb-0">
+        <li><strong>Hover over image:</strong> Use magnifier to zoom</li>
+        <li><strong>Adjust slider:</strong> Change magnification level</li>
+        <li><strong>Click "Capture Screenshot":</strong> Draw a box around the area you want to capture</li>
+        <li><strong>Scroll wheel:</strong> Adjust magnifier size</li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Image Viewer with Magnifier and Screenshot
+const mainImage = document.getElementById('mainImage');
+const magnifier = document.getElementById('magnifier');
+const container = document.getElementById('viewerContainer');
+const zoomSlider = document.getElementById('zoomSlider');
+const zoomLevel = document.getElementById('zoomLevel');
+const captureArea = document.getElementById('captureArea');
+const captureBtn = document.getElementById('captureBtn');
+const toggleMagnifier = document.getElementById('toggleMagnifier');
+const magnifierStatus = document.getElementById('magnifierStatus');
+
+let magnifierEnabled = true;
+let magnifierSize = 250;
+let zoomFactor = 3;
+let isCapturing = false;
+let captureStart = null;
+
+// Update zoom level
+zoomSlider.addEventListener('input', (e) => {
+    zoomFactor = parseFloat(e.target.value);
+    zoomLevel.textContent = zoomFactor.toFixed(1) + 'x';
+});
+
+// Zoom buttons
+document.getElementById('zoomIn').addEventListener('click', () => {
+    zoomSlider.value = Math.min(10, parseFloat(zoomSlider.value) + 0.5);
+    zoomSlider.dispatchEvent(new Event('input'));
+});
+
+document.getElementById('zoomOut').addEventListener('click', () => {
+    zoomSlider.value = Math.max(1, parseFloat(zoomSlider.value) - 0.5);
+    zoomSlider.dispatchEvent(new Event('input'));
+});
+
+// Toggle magnifier
+toggleMagnifier.addEventListener('click', () => {
+    magnifierEnabled = !magnifierEnabled;
+    magnifierStatus.textContent = magnifierEnabled ? 'ON' : 'OFF';
+    magnifier.style.display = 'none';
+});
+
+// Mouse wheel for magnifier size
+container.addEventListener('wheel', (e) => {
+    if (!magnifierEnabled) return;
+    e.preventDefault();
+    magnifierSize += e.deltaY > 0 ? -10 : 10;
+    magnifierSize = Math.max(100, Math.min(400, magnifierSize));
+    magnifier.style.width = magnifierSize + 'px';
+    magnifier.style.height = magnifierSize + 'px';
+});
+
+// Magnifier effect
+container.addEventListener('mousemove', (e) => {
+    if (!magnifierEnabled || isCapturing) return;
+
+    const rect = mainImage.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (x < 0 || x > rect.width || y < 0 || y > rect.height) {
+        magnifier.style.display = 'none';
+        return;
+    }
+
+    magnifier.style.display = 'block';
+    magnifier.style.left = (e.clientX - magnifierSize / 2) + 'px';
+    magnifier.style.top = (e.clientY - magnifierSize / 2) + 'px';
+    magnifier.style.width = magnifierSize + 'px';
+    magnifier.style.height = magnifierSize + 'px';
+
+    // Calculate background position
+    const bgX = -(x * zoomFactor - magnifierSize / 2);
+    const bgY = -(y * zoomFactor - magnifierSize / 2);
+
+    magnifier.style.backgroundImage = `url('{{ image.image_path|image_url }}')`;
+    magnifier.style.backgroundSize = `${rect.width * zoomFactor}px ${rect.height * zoomFactor}px`;
+    magnifier.style.backgroundPosition = `${bgX}px ${bgY}px`;
+});
+
+container.addEventListener('mouseleave', () => {
+    magnifier.style.display = 'none';
+});
+
+// Screenshot capture
+captureBtn.addEventListener('click', () => {
+    if (isCapturing) {
+        cancelCapture();
+    } else {
+        startCapture();
+    }
+});
+
+function startCapture() {
+    isCapturing = true;
+    captureBtn.innerHTML = '<i class="bi bi-x-circle"></i> Cancel Capture';
+    captureBtn.classList.remove('btn-primary');
+    captureBtn.classList.add('btn-danger');
+    container.style.cursor = 'crosshair';
+    magnifier.style.display = 'none';
+}
+
+function cancelCapture() {
+    isCapturing = false;
+    captureBtn.innerHTML = '<i class="bi bi-camera"></i> Capture Screenshot';
+    captureBtn.classList.remove('btn-danger');
+    captureBtn.classList.add('btn-primary');
+    container.style.cursor = 'default';
+    captureArea.style.display = 'none';
+    captureStart = null;
+}
+
+// Draw capture box
+container.addEventListener('mousedown', (e) => {
+    if (!isCapturing) return;
+
+    const rect = container.getBoundingClientRect();
+    captureStart = {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+    };
+    captureArea.style.display = 'block';
+    captureArea.style.left = captureStart.x + 'px';
+    captureArea.style.top = captureStart.y + 'px';
+    captureArea.style.width = '0px';
+    captureArea.style.height = '0px';
+});
+
+container.addEventListener('mousemove', (e) => {
+    if (!isCapturing || !captureStart) return;
+
+    const rect = container.getBoundingClientRect();
+    const currentX = e.clientX - rect.left;
+    const currentY = e.clientY - rect.top;
+
+    const width = currentX - captureStart.x;
+    const height = currentY - captureStart.y;
+
+    captureArea.style.width = Math.abs(width) + 'px';
+    captureArea.style.height = Math.abs(height) + 'px';
+    captureArea.style.left = (width < 0 ? currentX : captureStart.x) + 'px';
+    captureArea.style.top = (height < 0 ? currentY : captureStart.y) + 'px';
+});
+
+container.addEventListener('mouseup', (e) => {
+    if (!isCapturing || !captureStart) return;
+
+    const rect = mainImage.getBoundingClientRect();
+    const currentX = e.clientX - rect.left;
+    const currentY = e.clientY - rect.top;
+
+    // Calculate capture area in image coordinates
+    const captureBox = {
+        x: Math.min(captureStart.x, currentX),
+        y: Math.min(captureStart.y, currentY),
+        width: Math.abs(currentX - captureStart.x),
+        height: Math.abs(currentY - captureStart.y)
+    };
+
+    if (captureBox.width > 10 && captureBox.height > 10) {
+        performCapture(captureBox);
+    } else {
+        alert('Capture area too small. Please select a larger area.');
+        cancelCapture();
+    }
+});
+
+function performCapture(box) {
+    // Create canvas for capture
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // Set canvas size to capture area (at higher resolution)
+    canvas.width = box.width * zoomFactor * 2;
+    canvas.height = box.height * zoomFactor * 2;
+
+    // Draw portion of image
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() {
+        const rect = mainImage.getBoundingClientRect();
+        const scaleX = img.naturalWidth / rect.width;
+        const scaleY = img.naturalHeight / rect.height;
+
+        ctx.drawImage(
+            img,
+            box.x * scaleX,
+            box.y * scaleY,
+            box.width * scaleX,
+            box.height * scaleY,
+            0, 0,
+            canvas.width,
+            canvas.height
+        );
+
+        // Convert to blob and upload
+        canvas.toBlob((blob) => {
+            uploadScreenshot(blob);
+        }, 'image/jpeg', 0.95);
+    };
+    img.src = mainImage.src;
+}
+
+function uploadScreenshot(blob) {
+    const formData = new FormData();
+    formData.append('image', blob, 'screenshot.jpg');
+
+    fetch('{{ url_for("image_upload", record_id=record.id) }}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Screenshot saved successfully!');
+            window.location.href = '{{ url_for("record_detail", record_id=record.id) }}';
+        } else {
+            alert('Error saving screenshot: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error uploading screenshot');
+    })
+    .finally(() => {
+        cancelCapture();
+    });
+}
+</script>
+{% endblock %}
