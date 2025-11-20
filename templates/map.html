@@ -92,15 +92,17 @@
         headers: {}
     }).then(tiff => {
         console.log('GeoTIFF opened');
-        return tiff.getImage();
+        // Get overview level 2 (much smaller than full resolution)
+        // Level 0 = full res, 1 = 1/2 res, 2 = 1/4 res, 3 = 1/8 res
+        return tiff.getImage(2);
     }).then(image => {
-        console.log('Image loaded:', image.getWidth(), 'x', image.getHeight());
+        console.log('Overview image loaded:', image.getWidth(), 'x', image.getHeight());
 
         // Save bounding box for later
         imageBbox = image.getBoundingBox();
         console.log('BBox:', imageBbox);
 
-        // Read raster data (will use overviews for performance)
+        // Read raster data from overview (much smaller)
         return image.readRasters();
     }).then(rasters => {
         console.log('Rasters read:', rasters.width, 'x', rasters.height);
