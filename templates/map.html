@@ -80,24 +80,39 @@
     const mapInfo = document.getElementById('mapInfo');
 
     // Use proxy endpoint to bypass CORS
-    const cogProxyUrl = '/api/cog-proxy';
+    const cogProxyUrl = window.location.origin + '/api/cog-proxy';
 
-    parseGeoraster(cogProxyUrl).then(georaster => {
-        console.log('COG loaded successfully:', georaster);
-        var layer = new GeoRasterLayer({
-            georaster: georaster,
-            opacity: 0.8,
-            resolution: 256
+    console.log('Loading COG from:', cogProxyUrl);
+
+    fetch(cogProxyUrl)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch COG: ' + response.status);
+            }
+            console.log('COG fetched, parsing...');
+            return response.arrayBuffer();
+        })
+        .then(arrayBuffer => {
+            console.log('COG size:', arrayBuffer.byteLength, 'bytes');
+            return parseGeoraster(arrayBuffer);
+        })
+        .then(georaster => {
+            console.log('COG loaded successfully:', georaster);
+            var layer = new GeoRasterLayer({
+                georaster: georaster,
+                opacity: 0.8,
+                resolution: 256
+            });
+            layer.addTo(map);
+            map.fitBounds(layer.getBounds());
+            mapInfo.innerHTML = '<i class="bi bi-check-circle"></i> Orthophoto loaded';
+            loading.style.display = 'none';
+        })
+        .catch(err => {
+            console.error('COG error:', err);
+            mapInfo.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error loading orthophoto: ' + err.message;
+            loading.style.display = 'none';
         });
-        layer.addTo(map);
-        map.fitBounds(layer.getBounds());
-        mapInfo.innerHTML = '<i class="bi bi-check-circle"></i> Orthophoto loaded';
-        loading.style.display = 'none';
-    }).catch(err => {
-        console.error('COG error:', err);
-        mapInfo.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error loading orthophoto: ' + err.message;
-        loading.style.display = 'none';
-    });
 
     fetch('/api/points')
         .then(r => r.json())
