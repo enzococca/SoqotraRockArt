@@ -1,93 +1,121 @@
 {% extends "base.html" %}
 
-{% block title %}Map View - Soqotra Rock Art Database{% endblock %}
+{% block title %}Map View - Soqotra Rock Art{% endblock %}
+
+{% block extra_head %}
+<!-- GeoTIFF Libraries for COG -->
+<script src="https://unpkg.com/geotiff@2.0.7/dist-browser/geotiff.js"></script>
+<script src="https://unpkg.com/georaster@1.5.6/dist/georaster.browser.bundle.min.js"></script>
+<script src="https://unpkg.com/georaster-layer-for-leaflet@3.8.0/dist/georaster-layer-for-leaflet.min.js"></script>
+
+<style>
+    #map {
+        height: calc(100vh - 200px);
+        min-height: 500px;
+        width: 100%;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .map-controls {
+        padding: 1rem;
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .loading-indicator {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1000;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row mb-3">
-    <div class="col-md-6">
-        <h1><i class="bi bi-map"></i> Map View</h1>
-    </div>
-    <div class="col-md-6 text-end">
-        <a href="{{ url_for('records') }}" class="btn btn-outline-primary">
-            <i class="bi bi-list-ul"></i> Back to Records
-        </a>
-    </div>
-</div>
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2><i class="bi bi-map"></i> Rock Art Map - SHP042</h2>
 
-<div class="row">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body p-0">
-                <div id="map" style="height: 600px;"></div>
+            <div class="map-controls">
+                <div id="mapInfo" class="text-muted">
+                    <i class="bi bi-info-circle"></i> Loading map...
+                </div>
             </div>
-        </div>
-    </div>
-</div>
 
-<!-- Legend -->
-<div class="row mt-3">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-body">
-                <h5><i class="bi bi-info-circle"></i> Map Legend</h5>
-                <p class="mb-0">
-                    <i class="bi bi-geo-alt-fill text-danger"></i> Rock art site location
-                    | Click on markers to view record details
-                </p>
+            <div class="position-relative">
+                <div id="loadingIndicator" class="loading-indicator">
+                    <div class="spinner-border text-primary"></div>
+                    <p class="mt-2">Loading orthophoto...</p>
+                </div>
+                <div id="map"></div>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
-{% block extra_scripts %}
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-// Initialize map
-const map = L.map('map').setView([{{ config.DEFAULT_MAP_CENTER[0] }}, {{ config.DEFAULT_MAP_CENTER[1] }}], {{ config.DEFAULT_MAP_ZOOM }});
+    var map = L.map('map').setView([12.5, 54.0], 13);
 
-// Add OpenStreetMap tile layer
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxNativeZoom: 19,
-    maxZoom: 25  // Consente zoom digitale fino a 1cm
-}).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19
+    }).addTo(map);
 
-// GeoJSON data from server
-const geojson = {{ geojson|tojson }};
+    const loading = document.getElementById('loadingIndicator');
+    const mapInfo = document.getElementById('mapInfo');
 
-// Custom marker icon
-const customIcon = L.icon({
-    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41]
-});
+    fetch('/api/cog-url')
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                mapInfo.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Orthophoto not available';
+                loading.style.display = 'none';
+                return;
+            }
 
-// Add GeoJSON layer to map
-L.geoJSON(geojson, {
-    pointToLayer: function(feature, latlng) {
-        return L.marker(latlng, {icon: customIcon});
-    },
-    onEachFeature: function(feature, layer) {
-        const props = feature.properties;
-        const popupContent = `
-            <div class="popup-content">
-                <h6><strong>${props.site} - ${props.motif}</strong></h6>
-                <p class="mb-1"><strong>Type:</strong> ${props.type || '-'}</p>
-                <p class="mb-2"><strong>Description:</strong> ${props.description || '-'}</p>
-                <a href="/record/${props.id}" class="btn btn-sm btn-primary">View Details</a>
-            </div>
-        `;
-        layer.bindPopup(popupContent);
-    }
-}).addTo(map);
+            parseGeoraster(data.url).then(georaster => {
+                var layer = new GeoRasterLayer({
+                    georaster: georaster,
+                    opacity: 0.8,
+                    resolution: 256
+                });
+                layer.addTo(map);
+                map.fitBounds(layer.getBounds());
+                mapInfo.innerHTML = '<i class="bi bi-check-circle"></i> Orthophoto loaded';
+                loading.style.display = 'none';
+            }).catch(err => {
+                console.error('COG error:', err);
+                mapInfo.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error loading orthophoto';
+                loading.style.display = 'none';
+            });
+        });
 
-// Fit map to markers if there are any
-if (geojson.features.length > 0) {
-    const bounds = L.geoJSON(geojson).getBounds();
-    map.fitBounds(bounds, {padding: [50, 50]});
-}
+    fetch('/api/points')
+        .then(r => r.json())
+        .then(geojson => {
+            L.geoJSON(geojson, {
+                onEachFeature: function(feature, layer) {
+                    const p = feature.properties;
+                    layer.bindPopup(`
+                        <h6>${p.motif}</h6>
+                        <div><strong>Site:</strong> ${p.site}</div>
+                        <div><strong>Type:</strong> ${p.type || 'N/A'}</div>
+                        <a href="/record/${p.id}" class="btn btn-sm btn-primary mt-2">View</a>
+                    `);
+                }
+            }).addTo(map);
+        });
 </script>
 {% endblock %}

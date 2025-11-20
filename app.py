@@ -1146,6 +1146,76 @@ def api_type_description(type_name):
 
 
 # ============================================================================
+# MAP AND COG ENDPOINTS
+# ============================================================================
+
+@app.route('/map')
+@login_required
+def map_view():
+    """Display map with COG orthophoto and rock art points."""
+    return render_template('map.html', title='Map View')
+
+
+@app.route('/api/cog-url')
+def get_cog_url():
+    """Return COG URL from Dropbox."""
+    # For now, use direct Dropbox link (will be configurable via env var)
+    cog_url = os.getenv('DROPBOX_COG_URL')
+
+    if not cog_url:
+        # Fallback: try to get temporary Dropbox link
+        try:
+            if os.getenv('USE_DROPBOX') == 'true':
+                dropbox_path = '/tiles/orthophoto_shp042_cog.tif'
+                temp_link = get_dropbox_temporary_link(dropbox_path)
+                if temp_link:
+                    return jsonify({'url': temp_link})
+        except Exception as e:
+            print(f"Error getting COG URL: {e}")
+
+        return jsonify({'error': 'COG URL not configured'}), 500
+
+    return jsonify({'url': cog_url})
+
+
+@app.route('/api/points')
+def get_points():
+    """Return all rock art points with coordinates as GeoJSON."""
+    records = RockArt.query.filter(
+        RockArt.latitude.isnot(None),
+        RockArt.longitude.isnot(None)
+    ).all()
+
+    features = []
+    for record in records:
+        feature = {
+            'type': 'Feature',
+            'geometry': {
+                'type': 'Point',
+                'coordinates': [record.longitude, record.latitude]
+            },
+            'properties': {
+                'id': record.id,
+                'site': record.site,
+                'motif': record.motif,
+                'panel': record.panel,
+                'groups': record.groups,
+                'type': record.type,
+                'description': record.description,
+                'date': record.date.strftime('%Y-%m-%d') if record.date else None
+            }
+        }
+        features.append(feature)
+
+    geojson = {
+        'type': 'FeatureCollection',
+        'features': features
+    }
+
+    return jsonify(geojson)
+
+
+# ============================================================================
 # INITIALIZATION
 # ============================================================================
 
