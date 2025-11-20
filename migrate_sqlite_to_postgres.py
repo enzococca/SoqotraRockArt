@@ -17,6 +17,10 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from app import db, User, RockArt, Image, TypeDescription
 
+def row_to_dict(row):
+    """Convert sqlite3.Row to dict."""
+    return dict(zip(row.keys(), row))
+
 def connect_sqlite(sqlite_path):
     """Connect to SQLite database."""
     try:
@@ -61,24 +65,26 @@ def migrate_users(sqlite_conn, pg_session):
 
     for row in rows:
         try:
+            row_dict = row_to_dict(row)
+
             # Check if user already exists
-            existing = pg_session.query(User).filter_by(username=row['username']).first()
+            existing = pg_session.query(User).filter_by(username=row_dict['username']).first()
             if existing:
-                print(f"⚠️  User '{row['username']}' already exists, skipping")
+                print(f"⚠️  User '{row_dict['username']}' already exists, skipping")
                 skipped += 1
                 continue
 
             user = User(
-                username=row['username'],
-                email=row['email'],
-                password_hash=row['password_hash'],
-                is_active=row.get('is_active', True),
-                created_at=datetime.fromisoformat(row['created_at']) if row.get('created_at') else datetime.utcnow()
+                username=row_dict['username'],
+                email=row_dict['email'],
+                password_hash=row_dict['password_hash'],
+                is_active=row_dict.get('is_active', True),
+                created_at=datetime.fromisoformat(row_dict['created_at']) if row_dict.get('created_at') else datetime.utcnow()
             )
             pg_session.add(user)
             migrated += 1
         except Exception as e:
-            print(f"❌ Error migrating user '{row['username']}': {e}")
+            print(f"❌ Error migrating user '{row_dict.get('username', '?')}': {e}")
 
     pg_session.commit()
     print(f"✅ Migrated {migrated} users ({skipped} skipped)")
@@ -95,41 +101,43 @@ def migrate_rockart(sqlite_conn, pg_session):
 
     for row in rows:
         try:
+            row_dict = row_to_dict(row)
+
             # Check if record already exists (by site and motif)
             existing = pg_session.query(RockArt).filter_by(
-                site=row['site'],
-                motif=row['motif']
+                site=row_dict['site'],
+                motif=row_dict['motif']
             ).first()
 
             if existing:
-                print(f"⚠️  Record {row['id']} ({row['site']} - {row['motif']}) already exists, skipping")
-                id_mapping[row['id']] = existing.id
+                print(f"⚠️  Record {row_dict['id']} ({row_dict['site']} - {row_dict['motif']}) already exists, skipping")
+                id_mapping[row_dict['id']] = existing.id
                 continue
 
             record = RockArt(
-                site=row['site'],
-                motif=row['motif'],
-                panel=row.get('panel'),
-                groups=row.get('groups'),
-                type=row.get('type'),
-                date=datetime.strptime(row['date'], '%Y-%m-%d').date() if row.get('date') else None,
-                description=row.get('description'),
-                latitude=row.get('latitude'),
-                longitude=row.get('longitude'),
-                created_at=datetime.fromisoformat(row['created_at']) if row.get('created_at') else datetime.utcnow(),
-                updated_at=datetime.fromisoformat(row['updated_at']) if row.get('updated_at') else datetime.utcnow()
+                site=row_dict['site'],
+                motif=row_dict['motif'],
+                panel=row_dict.get('panel'),
+                groups=row_dict.get('groups'),
+                type=row_dict.get('type'),
+                date=datetime.strptime(row_dict['date'], '%Y-%m-%d').date() if row_dict.get('date') else None,
+                description=row_dict.get('description'),
+                latitude=row_dict.get('latitude'),
+                longitude=row_dict.get('longitude'),
+                created_at=datetime.fromisoformat(row_dict['created_at']) if row_dict.get('created_at') else datetime.utcnow(),
+                updated_at=datetime.fromisoformat(row_dict['updated_at']) if row_dict.get('updated_at') else datetime.utcnow()
             )
             pg_session.add(record)
             pg_session.flush()  # Get the new ID
 
-            id_mapping[row['id']] = record.id
+            id_mapping[row_dict['id']] = record.id
             migrated += 1
 
             if migrated % 100 == 0:
                 print(f"  ... migrated {migrated} records so far")
 
         except Exception as e:
-            print(f"❌ Error migrating record {row['id']}: {e}")
+            print(f"❌ Error migrating record {row_dict.get('id', '?')}: {e}")
 
     pg_session.commit()
     print(f"✅ Migrated {migrated} rock art records")
@@ -153,11 +161,12 @@ def migrate_images(sqlite_conn, pg_session, id_mapping):
 
     for row in rows:
         try:
-            old_record_id = row['record_id']
+            row_dict = row_to_dict(row)
+            old_record_id = row_dict['record_id']
 
             # Map old record_id to new record_id
             if old_record_id not in id_mapping:
-                print(f"⚠️  Image {row['id']}: parent record {old_record_id} not found, skipping")
+                print(f"⚠️  Image {row_dict['id']}: parent record {old_record_id} not found, skipping")
                 skipped += 1
                 continue
 
@@ -166,7 +175,7 @@ def migrate_images(sqlite_conn, pg_session, id_mapping):
             # Check if image already exists
             existing = pg_session.query(Image).filter_by(
                 record_id=new_record_id,
-                image_path=row['image_path']
+                image_path=row_dict['image_path']
             ).first()
 
             if existing:
@@ -175,10 +184,10 @@ def migrate_images(sqlite_conn, pg_session, id_mapping):
 
             image = Image(
                 record_id=new_record_id,
-                image_path=row['image_path'],
-                thumbnail_path=row['thumbnail_path'],
-                original_filename=row.get('original_filename'),
-                uploaded_at=datetime.fromisoformat(row['uploaded_at']) if row.get('uploaded_at') else datetime.utcnow()
+                image_path=row_dict['image_path'],
+                thumbnail_path=row_dict['thumbnail_path'],
+                original_filename=row_dict.get('original_filename'),
+                uploaded_at=datetime.fromisoformat(row_dict['uploaded_at']) if row_dict.get('uploaded_at') else datetime.utcnow()
             )
             pg_session.add(image)
             migrated += 1
@@ -187,7 +196,7 @@ def migrate_images(sqlite_conn, pg_session, id_mapping):
                 print(f"  ... migrated {migrated} images so far")
 
         except Exception as e:
-            print(f"❌ Error migrating image {row['id']}: {e}")
+            print(f"❌ Error migrating image {row_dict.get('id', '?')}: {e}")
 
     pg_session.commit()
     print(f"✅ Migrated {migrated} images ({skipped} skipped)")
@@ -210,22 +219,24 @@ def migrate_type_descriptions(sqlite_conn, pg_session):
 
     for row in rows:
         try:
+            row_dict = row_to_dict(row)
+
             # Check if type already exists
             existing = pg_session.query(TypeDescription).filter_by(
-                type_name=row['type_name']
+                type_name=row_dict['type_name']
             ).first()
 
             if existing:
                 continue
 
             type_desc = TypeDescription(
-                type_name=row['type_name'],
-                description=row.get('description')
+                type_name=row_dict['type_name'],
+                description=row_dict.get('description')
             )
             pg_session.add(type_desc)
             migrated += 1
         except Exception as e:
-            print(f"❌ Error migrating type '{row['type_name']}': {e}")
+            print(f"❌ Error migrating type '{row_dict.get('type_name', '?')}': {e}")
 
     pg_session.commit()
     print(f"✅ Migrated {migrated} type descriptions")
