@@ -556,8 +556,8 @@ def upload_geopackage():
             errors = []
 
             for idx, row in gdf.iterrows():
-                # Try to match by PtID or motif field
-                pt_id = row.get('PtID') or row.get('motif') or row.get('Motif')
+                # Try to match by PtID, ptd, or motif field
+                pt_id = row.get('PtID') or row.get('ptd') or row.get('motif') or row.get('Motif')
                 site = row.get('site') or row.get('Site')
 
                 if not pt_id:
