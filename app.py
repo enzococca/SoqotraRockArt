@@ -1193,7 +1193,8 @@ def cog_proxy():
 
     cog_url = os.getenv('DROPBOX_COG_URL')
     if not cog_url:
-        return jsonify({'error': 'COG URL not configured'}), 500
+        print("ERROR: DROPBOX_COG_URL environment variable not set")
+        return jsonify({'error': 'COG URL not configured. Please set DROPBOX_COG_URL environment variable.'}), 503
 
     # Get range header from client request (for COG byte-range requests)
     range_header = flask_request.headers.get('Range')
@@ -1202,9 +1203,22 @@ def cog_proxy():
     if range_header:
         headers['Range'] = range_header
 
+    print(f"COG Proxy: Requesting from Dropbox: {cog_url[:50]}... (Range: {range_header})")
+
     try:
         # Stream from Dropbox
         response = requests.get(cog_url, headers=headers, stream=True, timeout=30)
+
+        print(f"COG Proxy: Dropbox response status: {response.status_code}")
+
+        # Check if Dropbox returned an error
+        if response.status_code >= 400:
+            error_text = response.text[:200] if response.text else "No error details"
+            print(f"COG Proxy: Dropbox error: {response.status_code} - {error_text}")
+            return jsonify({
+                'error': f'Dropbox returned {response.status_code}',
+                'details': error_text
+            }), 503
 
         # Create response with CORS headers
         def generate():
@@ -1234,8 +1248,16 @@ def cog_proxy():
 
         return flask_response
 
+    except requests.exceptions.Timeout:
+        print("COG Proxy: Request to Dropbox timed out")
+        return jsonify({'error': 'Request to Dropbox timed out'}), 503
+    except requests.exceptions.RequestException as e:
+        print(f"COG Proxy: Request error: {e}")
+        return jsonify({'error': f'Failed to fetch from Dropbox: {str(e)}'}), 503
     except Exception as e:
-        print(f"Error proxying COG: {e}")
+        print(f"COG Proxy: Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 
