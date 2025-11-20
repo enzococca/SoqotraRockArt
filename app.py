@@ -434,45 +434,8 @@ def image_view(image_id):
 # ============================================================================
 # MAP ROUTES
 # ============================================================================
-
-@app.route('/map')
-@login_required
-def map_view():
-    """Display all records on a map."""
-    # Get records with coordinates
-    records = RockArt.query.filter(
-        RockArt.latitude.isnot(None),
-        RockArt.longitude.isnot(None)
-    ).all()
-
-    # Convert to GeoJSON format
-    features = []
-    for record in records:
-        features.append({
-            'type': 'Feature',
-            'geometry': {
-                'type': 'Point',
-                'coordinates': [record.longitude, record.latitude]
-            },
-            'properties': {
-                'id': record.id,
-                'site': record.site,
-                'motif': record.motif,
-                'type': record.type,
-                'description': record.description[:100] if record.description else ''
-            }
-        })
-
-    geojson = {
-        'type': 'FeatureCollection',
-        'features': features
-    }
-
-    # Check for custom basemap
-    basemap_path = Path(app.static_folder) / 'basemaps' / 'soqotra.tif'
-    has_basemap = basemap_path.exists()
-
-    return render_template('map.html', geojson=geojson, has_basemap=has_basemap)
+# Map view moved to COG integration section below (line ~1152)
+# Using new implementation with COG orthophoto support
 
 
 @app.route('/viewer')
