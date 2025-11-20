@@ -23,6 +23,17 @@ app = Flask(__name__)
 env = os.environ.get('FLASK_ENV', 'development')
 app.config.from_object(config[env])
 
+# Debug: Print Dropbox configuration at startup
+print("=" * 70)
+print("DROPBOX CONFIGURATION AT STARTUP")
+print("=" * 70)
+print(f"Environment: {env}")
+print(f"USE_DROPBOX: {app.config.get('USE_DROPBOX', 'NOT SET')}")
+print(f"DROPBOX_ACCESS_TOKEN: {'SET' if app.config.get('DROPBOX_ACCESS_TOKEN') else 'NOT SET'} ({len(app.config.get('DROPBOX_ACCESS_TOKEN', ''))} chars)")
+print(f"DROPBOX_ORIGINAL_FOLDER: {app.config.get('DROPBOX_ORIGINAL_FOLDER', 'NOT SET')}")
+print(f"DROPBOX_THUMBNAIL_FOLDER: {app.config.get('DROPBOX_THUMBNAIL_FOLDER', 'NOT SET')}")
+print("=" * 70)
+
 # Initialize extensions
 db.init_app(app)
 login_manager = LoginManager(app)
@@ -103,10 +114,15 @@ def get_image_url(image_path):
     if not image_path:
         return None
 
+    # Debug logging
+    use_dropbox = app.config.get('USE_DROPBOX', False)
+    print(f"[get_image_url] USE_DROPBOX={use_dropbox}, path={image_path}")
+
     # If Dropbox is not enabled, return local static URL
-    if not app.config.get('USE_DROPBOX', False):
+    if not use_dropbox:
         # Convert backslash to forward slash for web URLs
         web_path = image_path.replace('\\', '/')
+        print(f"[get_image_url] Returning static URL: {web_path}")
         return url_for('static', filename=web_path)
 
     # Extract filename from path (handle both / and \ separators)
@@ -129,10 +145,12 @@ def get_image_url(image_path):
     if temp_url:
         # Use Markup to prevent HTML escaping
         from markupsafe import Markup
+        print(f"[get_image_url] Successfully generated Dropbox URL for {filename}")
         return Markup(temp_url)
     else:
         # Fallback to local static URL if Dropbox API fails
         web_path = image_path.replace('\\', '/')
+        print(f"[get_image_url] Dropbox API failed, falling back to static URL: {web_path}")
         return url_for('static', filename=web_path)
 
 
