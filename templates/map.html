@@ -84,35 +84,63 @@
 
     console.log('Loading COG from:', cogProxyUrl);
 
-    fetch(cogProxyUrl)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to fetch COG: ' + response.status);
-            }
-            console.log('COG fetched, parsing...');
-            return response.arrayBuffer();
-        })
-        .then(arrayBuffer => {
-            console.log('COG size:', arrayBuffer.byteLength, 'bytes');
-            return parseGeoraster(arrayBuffer);
-        })
-        .then(georaster => {
-            console.log('COG loaded successfully:', georaster);
-            var layer = new GeoRasterLayer({
-                georaster: georaster,
-                opacity: 0.8,
-                resolution: 256
-            });
-            layer.addTo(map);
-            map.fitBounds(layer.getBounds());
-            mapInfo.innerHTML = '<i class="bi bi-check-circle"></i> Orthophoto loaded';
-            loading.style.display = 'none';
-        })
-        .catch(err => {
-            console.error('COG error:', err);
-            mapInfo.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error loading orthophoto: ' + err.message;
-            loading.style.display = 'none';
+    // Use fromUrl for efficient range requests (doesn't download entire file)
+    let imageBbox = null;
+
+    GeoTIFF.fromUrl(cogProxyUrl, {
+        allowFullFile: false,  // Don't download entire file
+        headers: {}
+    }).then(tiff => {
+        console.log('GeoTIFF opened');
+        return tiff.getImage();
+    }).then(image => {
+        console.log('Image loaded:', image.getWidth(), 'x', image.getHeight());
+
+        // Save bounding box for later
+        imageBbox = image.getBoundingBox();
+        console.log('BBox:', imageBbox);
+
+        // Read raster data (will use overviews for performance)
+        return image.readRasters();
+    }).then(rasters => {
+        console.log('Rasters read:', rasters.width, 'x', rasters.height);
+
+        // Create georaster object manually
+        const georaster = {
+            height: rasters.height,
+            width: rasters.width,
+            numberOfRasters: 3,
+            pixelHeight: Math.abs((imageBbox[3] - imageBbox[1]) / rasters.height),
+            pixelWidth: Math.abs((imageBbox[2] - imageBbox[0]) / rasters.width),
+            xmin: imageBbox[0],
+            xmax: imageBbox[2],
+            ymin: imageBbox[1],
+            ymax: imageBbox[3],
+            projection: 4326,
+            values: [rasters[0], rasters[1], rasters[2]]
+        };
+
+        console.log('Georaster created:', georaster);
+
+        var layer = new GeoRasterLayer({
+            georaster: georaster,
+            opacity: 0.8,
+            resolution: 256
         });
+
+        layer.addTo(map);
+
+        // Fit to bounds
+        const bounds = [[georaster.ymin, georaster.xmin], [georaster.ymax, georaster.xmax]];
+        map.fitBounds(bounds);
+
+        mapInfo.innerHTML = '<i class="bi bi-check-circle"></i> Orthophoto loaded';
+        loading.style.display = 'none';
+    }).catch(err => {
+        console.error('COG error:', err);
+        mapInfo.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Error loading orthophoto: ' + err.message;
+        loading.style.display = 'none';
+    });
 
     fetch('/api/points')
         .then(r => r.json())
