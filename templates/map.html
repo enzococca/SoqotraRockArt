@@ -3,11 +3,6 @@
 {% block title %}Map View - Soqotra Rock Art{% endblock %}
 
 {% block extra_head %}
-<!-- GeoTIFF Libraries for COG -->
-<script src="https://unpkg.com/geotiff@2.0.7/dist-browser/geotiff.js"></script>
-<script src="https://unpkg.com/georaster@1.5.6/dist/georaster.browser.bundle.min.js"></script>
-<script src="https://unpkg.com/georaster-layer-for-leaflet@3.8.0/dist/georaster-layer-for-leaflet.min.js"></script>
-
 <style>
     #map {
         height: calc(100vh - 200px);
@@ -64,7 +59,15 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Load Leaflet first -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Then load GeoTIFF libraries that depend on Leaflet -->
+<script src="https://unpkg.com/geotiff@2.0.7/dist-browser/geotiff.js"></script>
+<script src="https://unpkg.com/georaster@1.5.6/dist/georaster.browser.bundle.min.js"></script>
+<script src="https://unpkg.com/georaster-layer-for-leaflet@3.8.0/dist/georaster-layer-for-leaflet.min.js"></script>
+
+<!-- Initialize map after all libraries are loaded -->
 <script>
     var map = L.map('map').setView([12.5, 54.0], 13);
 
