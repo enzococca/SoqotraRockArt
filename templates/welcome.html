@@ -47,18 +47,29 @@
         }
         .description {
             background: #f8f9fa;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #8b4513;
             padding: 1.5rem;
             margin-bottom: 2.5rem;
             border-radius: 8px;
+            max-height: 400px;
+            overflow-y: auto;
         }
         .description h5 {
-            color: #667eea;
+            color: #8b4513;
             margin-bottom: 1rem;
+            font-weight: 700;
         }
         .description p {
-            margin-bottom: 0.5rem;
+            margin-bottom: 1rem;
             line-height: 1.8;
+            text-align: justify;
+            color: #333;
+        }
+        .description p:last-child {
+            margin-bottom: 0;
+        }
+        .description strong {
+            color: #654321;
         }
         .action-buttons {
             display: grid;
@@ -159,8 +170,13 @@
 
             <div class="description">
                 <h5><i class="bi bi-info-circle"></i> About the Project</h5>
-                <p>This database contains comprehensive documentation of rock art from Soqotra Island, including photographs, geospatial data, and detailed archaeological records.</p>
-                <p>The platform enables researchers to explore, analyze, and contribute to the preservation of Soqotra's archaeological heritage through an interactive mapping interface and structured data management system.</p>
+                <p>Soqotra Island, located in the Indian Ocean, harbors a remarkable archaeological heritage spanning from the 1st century BC to the modern era. This database documents the island's rich tradition of rock art, including cave pictograms and open-air petroglyphs that represent one of the most significant yet understudied archaeological resources in the Arabian Peninsula.</p>
+
+                <p><strong>Key Sites:</strong> The database includes documentation from major sites such as Hoq Cave (248 pictograms), Dahaisi Cave (104 pictograms), and numerous open-air locations including Eriosh, SHP_067, Di Ṣeberho, and Simar Qar. These sites feature diverse motifs including hands, feet, cruciform shapes, zoomorphic figures, ships, and inscriptions in South Arabian, Ethiopic, and Arabic scripts.</p>
+
+                <p><strong>Cultural Significance:</strong> Many rock art sites are strategically located near permanent or seasonal water sources, reflecting the critical importance of water in Soqotra's arid environment and highlighting the deep connection between indigenous communities and their landscape. The art serves as a testament to centuries of human presence, spiritual practices, and cultural continuity.</p>
+
+                <p>This platform enables researchers to explore, analyze, and contribute to the preservation of Soqotra's archaeological heritage through an interactive mapping interface, high-resolution orthophotos, and structured data management system.</p>
             </div>
 
             <div class="action-buttons">
