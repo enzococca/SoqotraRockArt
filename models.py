@@ -18,6 +18,8 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     is_active = db.Column(db.Boolean, default=True)
+    is_approved = db.Column(db.Boolean, default=False, index=True)  # Requires admin approval
+    role = db.Column(db.String(20), default='viewer', index=True)  # viewer, editor, admin
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def set_password(self, password):
@@ -27,6 +29,18 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         """Check if the provided password matches the hash."""
         return check_password_hash(self.password_hash, password)
+
+    def is_admin(self):
+        """Check if user has admin role."""
+        return self.role == 'admin'
+
+    def is_editor(self):
+        """Check if user can edit records (editor or admin)."""
+        return self.role in ['editor', 'admin']
+
+    def can_view(self):
+        """Check if user can view records (must be approved)."""
+        return self.is_approved and self.is_active
 
     def __repr__(self):
         return f'<User {self.username}>'
