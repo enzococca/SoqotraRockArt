@@ -736,53 +736,6 @@ def image_download(image_id):
 # Using new implementation with COG orthophoto support
 
 
-@app.route('/viewer')
-def public_viewer():
-    """Public viewer accessible without login."""
-    # Get all records with coordinates
-    records = RockArt.query.filter(
-        RockArt.latitude.isnot(None),
-        RockArt.longitude.isnot(None)
-    ).all()
-
-    # Convert to GeoJSON
-    features = []
-    for record in records:
-        # Get first image thumbnail URL if exists
-        thumbnail_url = get_image_url(record.images[0].thumbnail_path) if record.images else None
-
-        features.append({
-            'type': 'Feature',
-            'geometry': {
-                'type': 'Point',
-                'coordinates': [record.longitude, record.latitude]
-            },
-            'properties': {
-                'id': record.id,
-                'site': record.site,
-                'motif': record.motif,
-                'panel': record.panel,
-                'groups': record.groups,
-                'type': record.type,
-                'date': record.date.strftime('%Y-%m-%d') if record.date else None,
-                'description': record.description,
-                'image_count': len(record.images),
-                'thumbnail': thumbnail_url
-            }
-        })
-
-    geojson = {
-        'type': 'FeatureCollection',
-        'features': features
-    }
-
-    # Check for basemap
-    basemap_path = Path(app.static_folder) / 'basemaps' / 'soqotra.tif'
-    has_basemap = basemap_path.exists()
-
-    return render_template('public_viewer.html', geojson=geojson, has_basemap=has_basemap)
-
-
 @app.route('/api/records/geojson')
 @login_required
 def api_records_geojson():
