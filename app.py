@@ -213,6 +213,12 @@ def logout():
     return redirect(url_for('login'))
 
 
+@app.route('/privacy')
+def privacy():
+    """Privacy policy page for Dropbox app compliance."""
+    return render_template('privacy.html')
+
+
 # ============================================================================
 # MAIN ROUTES
 # ============================================================================
