@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}{% if orthophoto %}Edit{% else %}Create{% endif %} Orthophoto - Admin{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="bi bi-map"></i>
+                    {% if orthophoto %}Edit Orthophoto{% else %}Add New Orthophoto{% endif %}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Name -->
+                    <div class="mb-3">
+                        <label for="name" class="form-label">
+                            Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text"
+                               class="form-control"
+                               id="name"
+                               name="name"
+                               value="{{ orthophoto.name if orthophoto else '' }}"
+                               required
+                               placeholder="e.g., SHP042 Orthophoto">
+                        <div class="form-text">Unique identifier for this orthophoto</div>
+                    </div>
+
+                    <!-- Dropbox Path -->
+                    <div class="mb-3">
+                        <label for="dropbox_path" class="form-label">
+                            Dropbox Path <span class="text-danger">*</span>
+                        </label>
+                        <input type="text"
+                               class="form-control font-monospace"
+                               id="dropbox_path"
+                               name="dropbox_path"
+                               value="{{ orthophoto.dropbox_path if orthophoto else '' }}"
+                               required
+                               placeholder="/path/to/orthophoto.tif">
+                        <div class="form-text">
+                            Full path to the COG file in Dropbox (e.g., /Soqotra/tiles/orthophoto_shp042_cog.tif)
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control"
+                                  id="description"
+                                  name="description"
+                                  rows="3"
+                                  placeholder="Optional description of this orthophoto">{{ orthophoto.description if orthophoto else '' }}</textarea>
+                        <div class="form-text">Optional notes about this orthophoto</div>
+                    </div>
+
+                    <!-- File Size -->
+                    <div class="mb-3">
+                        <label for="file_size_mb" class="form-label">File Size (MB)</label>
+                        <input type="number"
+                               class="form-control"
+                               id="file_size_mb"
+                               name="file_size_mb"
+                               step="0.1"
+                               value="{{ orthophoto.file_size_mb if orthophoto and orthophoto.file_size_mb else '' }}"
+                               placeholder="e.g., 125.5">
+                        <div class="form-text">Optional file size for reference</div>
+                    </div>
+
+                    <!-- Bounding Box Section -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Bounding Box (Optional)</h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">
+                                Geographic extent in decimal degrees (WGS84). Used for automatically fitting the map to the orthophoto bounds.
+                            </p>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="bbox_xmin" class="form-label">Min Longitude (West)</label>
+                                    <input type="number"
+                                           class="form-control"
+                                           id="bbox_xmin"
+                                           name="bbox_xmin"
+                                           step="0.000001"
+                                           value="{{ orthophoto.bbox_xmin if orthophoto and orthophoto.bbox_xmin else '' }}"
+                                           placeholder="e.g., 54.123456">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="bbox_ymin" class="form-label">Min Latitude (South)</label>
+                                    <input type="number"
+                                           class="form-control"
+                                           id="bbox_ymin"
+                                           name="bbox_ymin"
+                                           step="0.000001"
+                                           value="{{ orthophoto.bbox_ymin if orthophoto and orthophoto.bbox_ymin else '' }}"
+                                           placeholder="e.g., 12.123456">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="bbox_xmax" class="form-label">Max Longitude (East)</label>
+                                    <input type="number"
+                                           class="form-control"
+                                           id="bbox_xmax"
+                                           name="bbox_xmax"
+                                           step="0.000001"
+                                           value="{{ orthophoto.bbox_xmax if orthophoto and orthophoto.bbox_xmax else '' }}"
+                                           placeholder="e.g., 54.234567">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="bbox_ymax" class="form-label">Max Latitude (North)</label>
+                                    <input type="number"
+                                           class="form-control"
+                                           id="bbox_ymax"
+                                           name="bbox_ymax"
+                                           step="0.000001"
+                                           value="{{ orthophoto.bbox_ymax if orthophoto and orthophoto.bbox_ymax else '' }}"
+                                           placeholder="e.g., 12.234567">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('admin_orthophotos') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i>
+                            {% if orthophoto %}Update Orthophoto{% else %}Create Orthophoto{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Help Card -->
+        <div class="card mt-3">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="bi bi-info-circle"></i> Help</h6>
+            </div>
+            <div class="card-body">
+                <h6>How to prepare a COG for Dropbox:</h6>
+                <ol>
+                    <li>Convert your GeoTIFF to Cloud Optimized GeoTIFF format:
+                        <pre class="bg-light p-2 mt-1"><code>gdal_translate -of COG -co COMPRESS=JPEG input.tif output_cog.tif</code></pre>
+                    </li>
+                    <li>Upload the COG file to your Dropbox folder</li>
+                    <li>Enter the Dropbox path (starting with /) in the form above</li>
+                    <li>Optionally, get the bounding box using:
+                        <pre class="bg-light p-2 mt-1"><code>gdalinfo output_cog.tif</code></pre>
+                    </li>
+                </ol>
+                <p class="mb-0 small text-muted">
+                    <strong>Note:</strong> Only one orthophoto should be active at a time for optimal performance.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

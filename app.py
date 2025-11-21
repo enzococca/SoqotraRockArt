@@ -305,6 +305,148 @@ def admin_delete_user(user_id):
     return redirect(url_for('admin_users'))
 
 
+@app.route('/admin/orthophotos')
+@login_required
+@admin_required
+def admin_orthophotos():
+    """Admin panel for managing orthophotos."""
+    from models import Orthophoto
+    orthophotos = Orthophoto.query.order_by(Orthophoto.created_at.desc()).all()
+    return render_template('admin_orthophotos.html', orthophotos=orthophotos)
+
+
+@app.route('/admin/orthophotos/create', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_orthophoto_create():
+    """Create a new orthophoto."""
+    from models import Orthophoto
+
+    if request.method == 'POST':
+        name = request.form.get('name')
+        dropbox_path = request.form.get('dropbox_path')
+        description = request.form.get('description', '')
+        file_size_mb = request.form.get('file_size_mb', type=float)
+
+        # Optional bbox
+        bbox_xmin = request.form.get('bbox_xmin', type=float)
+        bbox_ymin = request.form.get('bbox_ymin', type=float)
+        bbox_xmax = request.form.get('bbox_xmax', type=float)
+        bbox_ymax = request.form.get('bbox_ymax', type=float)
+
+        # Validation
+        if not name or not dropbox_path:
+            flash('Name and Dropbox path are required.', 'danger')
+            return render_template('admin_orthophoto_form.html', orthophoto=None)
+
+        # Check if name already exists
+        existing = Orthophoto.query.filter_by(name=name).first()
+        if existing:
+            flash(f'Orthophoto with name "{name}" already exists.', 'danger')
+            return render_template('admin_orthophoto_form.html', orthophoto=None)
+
+        # Create new orthophoto
+        orthophoto = Orthophoto(
+            name=name,
+            dropbox_path=dropbox_path,
+            description=description,
+            file_size_mb=file_size_mb,
+            bbox_xmin=bbox_xmin,
+            bbox_ymin=bbox_ymin,
+            bbox_xmax=bbox_xmax,
+            bbox_ymax=bbox_ymax,
+            is_active=True
+        )
+
+        db.session.add(orthophoto)
+        db.session.commit()
+        flash(f'Orthophoto "{name}" created successfully.', 'success')
+        return redirect(url_for('admin_orthophotos'))
+
+    return render_template('admin_orthophoto_form.html', orthophoto=None)
+
+
+@app.route('/admin/orthophotos/<int:orthophoto_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def admin_orthophoto_edit(orthophoto_id):
+    """Edit an existing orthophoto."""
+    from models import Orthophoto
+    orthophoto = Orthophoto.query.get_or_404(orthophoto_id)
+
+    if request.method == 'POST':
+        name = request.form.get('name')
+        dropbox_path = request.form.get('dropbox_path')
+        description = request.form.get('description', '')
+        file_size_mb = request.form.get('file_size_mb', type=float)
+
+        # Optional bbox
+        bbox_xmin = request.form.get('bbox_xmin', type=float)
+        bbox_ymin = request.form.get('bbox_ymin', type=float)
+        bbox_xmax = request.form.get('bbox_xmax', type=float)
+        bbox_ymax = request.form.get('bbox_ymax', type=float)
+
+        # Validation
+        if not name or not dropbox_path:
+            flash('Name and Dropbox path are required.', 'danger')
+            return render_template('admin_orthophoto_form.html', orthophoto=orthophoto)
+
+        # Check if name is taken by another orthophoto
+        existing = Orthophoto.query.filter(
+            Orthophoto.name == name,
+            Orthophoto.id != orthophoto_id
+        ).first()
+        if existing:
+            flash(f'Orthophoto with name "{name}" already exists.', 'danger')
+            return render_template('admin_orthophoto_form.html', orthophoto=orthophoto)
+
+        # Update orthophoto
+        orthophoto.name = name
+        orthophoto.dropbox_path = dropbox_path
+        orthophoto.description = description
+        orthophoto.file_size_mb = file_size_mb
+        orthophoto.bbox_xmin = bbox_xmin
+        orthophoto.bbox_ymin = bbox_ymin
+        orthophoto.bbox_xmax = bbox_xmax
+        orthophoto.bbox_ymax = bbox_ymax
+
+        db.session.commit()
+        flash(f'Orthophoto "{name}" updated successfully.', 'success')
+        return redirect(url_for('admin_orthophotos'))
+
+    return render_template('admin_orthophoto_form.html', orthophoto=orthophoto)
+
+
+@app.route('/admin/orthophotos/<int:orthophoto_id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def admin_orthophoto_toggle(orthophoto_id):
+    """Toggle orthophoto active status."""
+    from models import Orthophoto
+    orthophoto = Orthophoto.query.get_or_404(orthophoto_id)
+    orthophoto.is_active = not orthophoto.is_active
+    db.session.commit()
+
+    status = 'activated' if orthophoto.is_active else 'deactivated'
+    flash(f'Orthophoto "{orthophoto.name}" {status}.', 'success')
+    return redirect(url_for('admin_orthophotos'))
+
+
+@app.route('/admin/orthophotos/<int:orthophoto_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_orthophoto_delete(orthophoto_id):
+    """Delete an orthophoto."""
+    from models import Orthophoto
+    orthophoto = Orthophoto.query.get_or_404(orthophoto_id)
+
+    name = orthophoto.name
+    db.session.delete(orthophoto)
+    db.session.commit()
+    flash(f'Orthophoto "{name}" deleted successfully.', 'success')
+    return redirect(url_for('admin_orthophotos'))
+
+
 # ============================================================================
 # MAIN ROUTES
 # ============================================================================
@@ -551,6 +693,40 @@ def image_view(image_id):
     image = Image.query.get_or_404(image_id)
     record = image.record
     return render_template('image_viewer.html', image=image, record=record)
+
+
+@app.route('/image/<int:image_id>/download')
+@login_required
+def image_download(image_id):
+    """Download an image file."""
+    image = Image.query.get_or_404(image_id)
+
+    # Check if using Dropbox
+    if app.config.get('USE_DROPBOX'):
+        # Get temporary download link from Dropbox
+        dropbox_path = image.image_path  # This should be the full Dropbox path
+        temp_url = get_dropbox_temporary_link(dropbox_path)
+
+        if temp_url:
+            # Redirect to Dropbox temporary link with download=1 parameter
+            import urllib.parse
+            download_url = temp_url + ('&' if '?' in temp_url else '?') + 'dl=1'
+            return redirect(download_url)
+        else:
+            flash('Failed to generate download link from Dropbox', 'danger')
+            return redirect(url_for('record_detail', record_id=image.record_id))
+    else:
+        # Serve from local static folder
+        import os
+        file_path = os.path.join(app.root_path, image.image_path.lstrip('/'))
+
+        if os.path.exists(file_path):
+            # Get original filename or generate one
+            filename = image.original_filename or f'image_{image.id}.jpg'
+            return send_file(file_path, as_attachment=True, download_name=filename)
+        else:
+            flash('Image file not found', 'danger')
+            return redirect(url_for('record_detail', record_id=image.record_id))
 
 
 # ============================================================================
@@ -1280,6 +1456,16 @@ def get_points():
 
     features = []
     for record in records:
+        # Get images for this record
+        images_data = []
+        for img in record.images[:5]:  # Limit to first 5 images for performance
+            images_data.append({
+                'id': img.id,
+                'thumbnail_path': img.thumbnail_path,
+                'image_path': img.image_path,
+                'download_url': url_for('image_download', image_id=img.id, _external=False)
+            })
+
         feature = {
             'type': 'Feature',
             'geometry': {
@@ -1294,7 +1480,9 @@ def get_points():
                 'groups': record.groups,
                 'type': record.type,
                 'description': record.description,
-                'date': record.date.strftime('%Y-%m-%d') if record.date else None
+                'date': record.date.strftime('%Y-%m-%d') if record.date else None,
+                'image_count': len(record.images),
+                'images': images_data
             }
         }
         features.append(feature)

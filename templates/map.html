@@ -120,12 +120,52 @@
             L.geoJSON(geojson, {
                 onEachFeature: function(feature, layer) {
                     const p = feature.properties;
+
+                    // Build images gallery HTML
+                    let imagesHtml = '';
+                    if (p.images && p.images.length > 0) {
+                        imagesHtml = '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0;">';
+                        p.images.forEach(img => {
+                            imagesHtml += `
+                                <div style="position: relative;">
+                                    <img src="${img.thumbnail_path}"
+                                         style="width: 100%; height: 100px; object-fit: cover; border-radius: 5px; cursor: pointer;"
+                                         onclick="window.open('${img.image_path}', '_blank')">
+                                    <a href="${img.download_url}"
+                                       class="btn btn-sm btn-primary"
+                                       style="position: absolute; bottom: 5px; right: 5px; padding: 2px 6px; font-size: 0.75rem;"
+                                       title="Download">
+                                        <i class="bi bi-download"></i>
+                                    </a>
+                                </div>
+                            `;
+                        });
+                        imagesHtml += '</div>';
+                        if (p.image_count > p.images.length) {
+                            imagesHtml += `<div class="text-muted small">Showing ${p.images.length} of ${p.image_count} images</div>`;
+                        }
+                    }
+
                     layer.bindPopup(`
-                        <h6>${p.motif}</h6>
-                        <div><strong>Site:</strong> ${p.site}</div>
-                        <div><strong>Type:</strong> ${p.type || 'N/A'}</div>
-                        <a href="/record/${p.id}" class="btn btn-sm btn-primary mt-2">View</a>
-                    `);
+                        <div style="min-width: 300px; max-width: 400px;">
+                            <h5 style="margin-bottom: 10px;">${p.motif}</h5>
+                            <div style="margin-bottom: 8px;"><strong>Site:</strong> ${p.site}</div>
+                            ${p.panel ? `<div style="margin-bottom: 8px;"><strong>Panel:</strong> ${p.panel}</div>` : ''}
+                            ${p.groups ? `<div style="margin-bottom: 8px;"><strong>Groups:</strong> ${p.groups}</div>` : ''}
+                            ${p.type ? `<div style="margin-bottom: 8px;"><strong>Type:</strong> ${p.type}</div>` : ''}
+                            ${p.date ? `<div style="margin-bottom: 8px;"><strong>Date:</strong> ${p.date}</div>` : ''}
+                            ${p.description ? `<div style="margin-bottom: 8px;"><strong>Description:</strong><br><span style="font-size: 0.9rem;">${p.description.substring(0, 200)}${p.description.length > 200 ? '...' : ''}</span></div>` : ''}
+                            ${imagesHtml}
+                            <div style="margin-top: 10px; text-align: center;">
+                                <a href="/record/${p.id}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                    <i class="bi bi-box-arrow-up-right"></i> Full Details
+                                </a>
+                            </div>
+                        </div>
+                    `, {
+                        maxWidth: 450,
+                        maxHeight: 600
+                    });
                 }
             }).addTo(map);
         });

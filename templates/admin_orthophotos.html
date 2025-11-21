@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Orthophotos - Admin{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="bi bi-map"></i> Manage Orthophotos</h1>
+                <p class="text-muted">Manage COG orthophoto overlays for the map viewer.</p>
+            </div>
+            <div>
+                <a href="{{ url_for('admin_orthophoto_create') }}" class="btn btn-success">
+                    <i class="bi bi-plus-circle"></i> Add New Orthophoto
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <h5 class="card-title">Total Orthophotos</h5>
+                <h2>{{ orthophotos|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5 class="card-title">Active</h5>
+                <h2>{{ orthophotos|selectattr('is_active')|list|length }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-secondary text-white">
+            <div class="card-body">
+                <h5 class="card-title">Inactive</h5>
+                <h2>{{ orthophotos|rejectattr('is_active')|list|length }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Orthophotos Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-table"></i> All Orthophotos</h5>
+    </div>
+    <div class="card-body">
+        {% if orthophotos|length > 0 %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Dropbox Path</th>
+                        <th>Status</th>
+                        <th>File Size</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ortho in orthophotos %}
+                    <tr class="{% if not ortho.is_active %}table-secondary{% endif %}">
+                        <td>{{ ortho.id }}</td>
+                        <td>
+                            <strong>{{ ortho.name }}</strong>
+                            {% if ortho.description %}
+                            <br><small class="text-muted">{{ ortho.description[:60] }}{% if ortho.description|length > 60 %}...{% endif %}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="font-monospace text-muted">
+                                {{ ortho.dropbox_path if ortho.dropbox_path|length < 50 else ortho.dropbox_path[:47] + '...' }}
+                            </small>
+                        </td>
+                        <td>
+                            {% if ortho.is_active %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle"></i> Active
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary">
+                                <i class="bi bi-x-circle"></i> Inactive
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if ortho.file_size_mb %}
+                            <span class="badge bg-info">{{ "%.1f"|format(ortho.file_size_mb) }} MB</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ ortho.created_at.strftime('%Y-%m-%d') if ortho.created_at else 'N/A' }}</small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <form method="POST" action="{{ url_for('admin_orthophoto_toggle', orthophoto_id=ortho.id) }}" class="d-inline">
+                                    <button type="submit" class="btn {% if ortho.is_active %}btn-warning{% else %}btn-success{% endif %}"
+                                            title="{% if ortho.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                        <i class="bi {% if ortho.is_active %}bi-eye-slash{% else %}bi-eye{% endif %}"></i>
+                                    </button>
+                                </form>
+
+                                <a href="{{ url_for('admin_orthophoto_edit', orthophoto_id=ortho.id) }}"
+                                   class="btn btn-primary" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+
+                                <form method="POST" action="{{ url_for('admin_orthophoto_delete', orthophoto_id=ortho.id) }}" class="d-inline"
+                                      onsubmit="return confirm('Are you sure you want to delete orthophoto &quot;{{ ortho.name }}&quot;? This action cannot be undone.');">
+                                    <button type="submit" class="btn btn-danger" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="bi bi-map" style="font-size: 3rem;"></i>
+            <p>No orthophotos found</p>
+            <a href="{{ url_for('admin_orthophoto_create') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Your First Orthophoto
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Info Panel -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> About Orthophotos</h5>
+            </div>
+            <div class="card-body">
+                <p>Orthophotos are georeferenced images displayed as map overlays. This system supports Cloud Optimized GeoTIFFs (COG) stored in Dropbox.</p>
+                <ul>
+                    <li><strong>Name:</strong> Unique identifier for the orthophoto</li>
+                    <li><strong>Dropbox Path:</strong> Path to the COG file in Dropbox</li>
+                    <li><strong>Status:</strong> Active orthophotos are displayed on the map. Only one should be active at a time.</li>
+                    <li><strong>Bounding Box:</strong> Optional geographic extent (xmin, ymin, xmax, ymax) for map fitting</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
