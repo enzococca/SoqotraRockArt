@@ -73,7 +73,8 @@
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap',
-        maxZoom: 19
+        maxNativeZoom: 19,
+        maxZoom: 23  // Allow zoom up to ~1cm detail
     }).addTo(map);
 
     const loading = document.getElementById('loadingIndicator');

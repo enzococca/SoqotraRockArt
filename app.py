@@ -224,9 +224,15 @@ def privacy():
 # ============================================================================
 
 @app.route('/')
+def welcome():
+    """Public landing page."""
+    return render_template('welcome.html')
+
+
+@app.route('/dashboard')
 @login_required
 def index():
-    """Home page with dashboard."""
+    """Home page with dashboard (authenticated users only)."""
     total_records = RockArt.query.count()
     total_images = Image.query.count()
     recent_records = RockArt.query.order_by(RockArt.created_at.desc()).limit(5).all()
@@ -235,6 +241,12 @@ def index():
                            total_records=total_records,
                            total_images=total_images,
                            recent_records=recent_records)
+
+
+@app.route('/public-viewer')
+def public_viewer():
+    """Public viewer - readonly access to map and records."""
+    return render_template('public_viewer.html')
 
 
 @app.route('/records')

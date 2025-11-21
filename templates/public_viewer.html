@@ -143,6 +143,15 @@
                 </button>
             </div>
 
+            <div class="mb-3 d-grid gap-2">
+                <a href="{{ url_for('login') }}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-box-arrow-in-right"></i> Login
+                </a>
+                <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-person-plus"></i> Register
+                </a>
+            </div>
+
             <div class="mb-3">
                 <input type="text" class="form-control" id="searchBox" placeholder="Search by site, motif, or type...">
             </div>
@@ -207,11 +216,12 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-fullscreen/v1.0.1/Leaflet.fullscreen.min.js"></script>
 
-    <script>
-        // GeoJSON data from server
-        const geojson = {{ geojson|tojson }};
-        const hasBasemap = {{ 'true' if has_basemap else 'false' }};
+    <!-- GeoTIFF libraries for COG loading -->
+    <script src="https://unpkg.com/geotiff@2.0.7/dist-browser/geotiff.js"></script>
+    <script src="https://unpkg.com/georaster@1.5.6/dist/georaster.browser.bundle.min.js"></script>
+    <script src="https://unpkg.com/georaster-layer-for-leaflet@3.8.0/dist/georaster-layer-for-leaflet.min.js"></script>
 
+    <script>
         // Initialize map
         const map = L.map('map', {
             fullscreenControl: true
@@ -221,8 +231,27 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors',
             maxNativeZoom: 19,
-            maxZoom: 25  // Consente zoom digitale fino a 1cm
+            maxZoom: 23  // Zoom up to 1cm detail
         }).addTo(map);
+
+        // Load COG orthophoto
+        const cogProxyUrl = window.location.origin + '/api/cog-proxy';
+        parseGeoraster(cogProxyUrl).then(georaster => {
+            console.log('COG loaded:', georaster);
+            var layer = new GeoRasterLayer({
+                georaster: georaster,
+                opacity: 0.7,
+                resolution: 256
+            });
+            layer.addTo(map);
+            const bounds = [[georaster.ymin, georaster.xmin], [georaster.ymax, georaster.xmax]];
+            map.fitBounds(bounds);
+        }).catch(err => {
+            console.warn('COG not available, using base map only:', err);
+        });
+
+        // Will store geojson data fetched from API
+        let geojson = { type: 'FeatureCollection', features: [] };
 
         // Custom marker icon
         const customIcon = L.icon({
@@ -237,53 +266,71 @@
         // Store markers
         const markers = [];
         let totalImages = 0;
+        let geoJsonLayer = null;
 
-        // Add GeoJSON layer
-        const geoJsonLayer = L.geoJSON(geojson, {
-            pointToLayer: function(feature, latlng) {
-                const marker = L.marker(latlng, {icon: customIcon});
-                markers.push({marker, feature});
-                return marker;
-            },
-            onEachFeature: function(feature, layer) {
-                const props = feature.properties;
-                totalImages += props.image_count || 0;
+        // Fetch and display rock art points from API
+        fetch('/api/points')
+            .then(r => r.json())
+            .then(data => {
+                geojson = data;
 
-                const popupContent = `
-                    <div style="min-width: 250px;">
-                        <h6><strong>${props.site} - ${props.motif}</strong></h6>
-                        ${props.thumbnail ? `
-                            <img src="${props.thumbnail}"
-                                 style="width: 100%; height: 150px; object-fit: cover; margin: 10px 0; border-radius: 5px;"
-                                 onclick="showImageModal('${props.thumbnail}', '${props.site} - ${props.motif}')">
-                        ` : ''}
-                        <p class="mb-1"><strong>Panel:</strong> ${props.panel || '-'}</p>
-                        <p class="mb-1"><strong>Type:</strong> ${props.type || '-'}</p>
-                        <p class="mb-1"><strong>Date:</strong> ${props.date || '-'}</p>
-                        ${props.description ? `
-                            <p class="mb-1"><strong>Description:</strong></p>
-                            <p class="small">${props.description.substring(0, 200)}${props.description.length > 200 ? '...' : ''}</p>
-                        ` : ''}
-                        <p class="mb-0"><span class="badge bg-secondary">${props.image_count} images</span></p>
-                    </div>
-                `;
-                layer.bindPopup(popupContent, {maxWidth: 300});
+                // Add GeoJSON layer
+                geoJsonLayer = L.geoJSON(geojson, {
+                    pointToLayer: function(feature, latlng) {
+                        const marker = L.marker(latlng, {icon: customIcon});
+                        markers.push({marker, feature});
+                        return marker;
+                    },
+                    onEachFeature: function(feature, layer) {
+                        const props = feature.properties;
+                        totalImages += props.image_count || 0;
 
-                // Add click handler
-                layer.on('click', function() {
-                    highlightRecord(props.id);
-                });
-            }
-        }).addTo(map);
+                        const popupContent = `
+                            <div style="min-width: 250px;">
+                                <h6><strong>${props.site} - ${props.motif}</strong></h6>
+                                ${props.thumbnail ? `
+                                    <img src="${props.thumbnail}"
+                                         style="width: 100%; height: 150px; object-fit: cover; margin: 10px 0; border-radius: 5px;"
+                                         onclick="showImageModal('${props.thumbnail}', '${props.site} - ${props.motif}')">
+                                ` : ''}
+                                <p class="mb-1"><strong>Panel:</strong> ${props.panel || '-'}</p>
+                                <p class="mb-1"><strong>Type:</strong> ${props.type || '-'}</p>
+                                <p class="mb-1"><strong>Date:</strong> ${props.date || '-'}</p>
+                                ${props.description ? `
+                                    <p class="mb-1"><strong>Description:</strong></p>
+                                    <p class="small">${props.description.substring(0, 200)}${props.description.length > 200 ? '...' : ''}</p>
+                                ` : ''}
+                                <p class="mb-0"><span class="badge bg-secondary">${props.image_count} images</span></p>
+                                <hr>
+                                <p class="text-muted small mb-0">
+                                    <i class="bi bi-lock"></i> <a href="/login">Login</a> to view full details and images
+                                </p>
+                            </div>
+                        `;
+                        layer.bindPopup(popupContent, {maxWidth: 300});
 
-        // Update stats
-        document.getElementById('totalRecords').textContent = geojson.features.length;
-        document.getElementById('totalImages').textContent = totalImages;
+                        // Add click handler
+                        layer.on('click', function() {
+                            highlightRecord(props.id);
+                        });
+                    }
+                }).addTo(map);
 
-        // Fit bounds if there are features
-        if (geojson.features.length > 0) {
-            map.fitBounds(geoJsonLayer.getBounds(), {padding: [50, 50]});
-        }
+                // Update stats
+                document.getElementById('totalRecords').textContent = geojson.features.length;
+                document.getElementById('totalImages').textContent = totalImages;
+
+                // Populate sidebar
+                populateRecordsList();
+
+                // Fit bounds if there are features
+                if (geojson.features.length > 0) {
+                    map.fitBounds(geoJsonLayer.getBounds(), {padding: [50, 50]});
+                }
+            })
+            .catch(err => {
+                console.error('Error loading points:', err);
+            });
 
         // Populate sidebar
         function populateRecordsList(features = geojson.features) {
@@ -343,7 +390,7 @@
 
         // Zoom to fit
         document.getElementById('zoomFit').addEventListener('click', () => {
-            if (geojson.features.length > 0) {
+            if (geoJsonLayer && geojson.features.length > 0) {
                 map.fitBounds(geoJsonLayer.getBounds(), {padding: [50, 50]});
             }
         });
