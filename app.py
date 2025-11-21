@@ -1205,14 +1205,19 @@ def get_points():
 
 @app.route('/api/cog-proxy')
 def cog_proxy():
-    """Proxy COG requests from Dropbox to bypass CORS issues."""
+    """Proxy COG requests from Dropbox using API temporary links."""
     import requests
     from flask import Response, request as flask_request
 
-    cog_url = os.getenv('DROPBOX_COG_URL')
+    # Path to COG file in Dropbox
+    cog_dropbox_path = '/Soqotra/tiles/orthophoto_shp042_final.tif'
+
+    # Get temporary link from Dropbox API (supports range requests better than shared links)
+    cog_url = get_dropbox_temporary_link(cog_dropbox_path)
+
     if not cog_url:
-        print("ERROR: DROPBOX_COG_URL environment variable not set")
-        return jsonify({'error': 'COG URL not configured. Please set DROPBOX_COG_URL environment variable.'}), 503
+        print(f"ERROR: Could not generate Dropbox temporary link for {cog_dropbox_path}")
+        return jsonify({'error': 'Failed to get COG from Dropbox. Check DROPBOX_ACCESS_TOKEN.'}), 503
 
     # Get range header from client request (for COG byte-range requests)
     range_header = flask_request.headers.get('Range')
@@ -1221,7 +1226,7 @@ def cog_proxy():
     if range_header:
         headers['Range'] = range_header
 
-    print(f"COG Proxy: Requesting from Dropbox: {cog_url[:50]}... (Range: {range_header})")
+    print(f"COG Proxy: Using temporary link (Range: {range_header})")
 
     try:
         # Stream from Dropbox
