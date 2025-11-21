@@ -1414,8 +1414,8 @@ def get_points():
         for img in record.images[:5]:  # Limit to first 5 images for performance
             images_data.append({
                 'id': img.id,
-                'thumbnail_path': img.thumbnail_path,
-                'image_path': img.image_path,
+                'thumbnail_path': get_image_url(img.thumbnail_path),
+                'image_path': get_image_url(img.image_path),
                 'download_url': url_for('image_download', image_id=img.id, _external=False)
             })
 
