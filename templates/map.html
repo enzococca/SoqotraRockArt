@@ -84,59 +84,28 @@
 
     console.log('Loading COG from:', cogProxyUrl);
 
-    // Use fromUrl for efficient range requests (doesn't download entire file)
-    let imageBbox = null;
+    // Use parseGeoraster which handles GeoTIFF metadata and affine transformations automatically
+    parseGeoraster(cogProxyUrl).then(georaster => {
+        console.log('Georaster parsed:', georaster);
+        console.log('Bounds:', georaster.xmin, georaster.ymin, georaster.xmax, georaster.ymax);
+        console.log('Size:', georaster.width, 'x', georaster.height);
+        console.log('Projection:', georaster.projection);
 
-    GeoTIFF.fromUrl(cogProxyUrl, {
-        allowFullFile: false,  // Don't download entire file
-        headers: {}
-    }).then(tiff => {
-        console.log('GeoTIFF opened');
-        // Get overview level 2 (much smaller than full resolution)
-        // Level 0 = full res, 1 = 1/2 res, 2 = 1/4 res, 3 = 1/8 res
-        return tiff.getImage(2);
-    }).then(image => {
-        console.log('Overview image loaded:', image.getWidth(), 'x', image.getHeight());
-
-        // Save bounding box for later
-        imageBbox = image.getBoundingBox();
-        console.log('BBox:', imageBbox);
-
-        // Read raster data from overview (much smaller)
-        return image.readRasters();
-    }).then(rasters => {
-        console.log('Rasters read:', rasters.width, 'x', rasters.height);
-
-        // Create georaster object manually
-        const georaster = {
-            height: rasters.height,
-            width: rasters.width,
-            numberOfRasters: 3,
-            pixelHeight: Math.abs((imageBbox[3] - imageBbox[1]) / rasters.height),
-            pixelWidth: Math.abs((imageBbox[2] - imageBbox[0]) / rasters.width),
-            xmin: imageBbox[0],
-            xmax: imageBbox[2],
-            ymin: imageBbox[1],
-            ymax: imageBbox[3],
-            projection: 4326,
-            values: [rasters[0], rasters[1], rasters[2]]
-        };
-
-        console.log('Georaster created:', georaster);
-
+        // Create layer with the parsed georaster
         var layer = new GeoRasterLayer({
             georaster: georaster,
             opacity: 0.8,
-            resolution: 256
+            resolution: 256  // Display resolution (lower = faster rendering)
         });
 
         layer.addTo(map);
 
-        // Fit to bounds
+        // Fit map to orthophoto bounds
         const bounds = [[georaster.ymin, georaster.xmin], [georaster.ymax, georaster.xmax]];
         map.fitBounds(bounds);
 
-        mapInfo.innerHTML = '<i class="bi bi-check-circle"></i> Orthophoto loaded';
+        mapInfo.innerHTML = '<i class="bi bi-check-circle"></i> Orthophoto loaded (' +
+            georaster.width + 'x' + georaster.height + ' pixels)';
         loading.style.display = 'none';
     }).catch(err => {
         console.error('COG error:', err);

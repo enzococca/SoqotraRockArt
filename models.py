@@ -115,3 +115,42 @@ class TypeDescription(db.Model):
 
     def __repr__(self):
         return f'<TypeDescription {self.type_name}>'
+
+
+class Orthophoto(db.Model):
+    """Orthophoto/COG map model for managing multiple geospatial overlays."""
+    __tablename__ = 'orthophotos'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    dropbox_path = db.Column(db.String(500), nullable=False)
+    description = db.Column(db.Text)
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    file_size_mb = db.Column(db.Float)
+
+    # Optional metadata for faster loading
+    bbox_xmin = db.Column(db.Float)
+    bbox_ymin = db.Column(db.Float)
+    bbox_xmax = db.Column(db.Float)
+    bbox_ymax = db.Column(db.Float)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Orthophoto {self.name}>'
+
+    def to_dict(self):
+        """Convert orthophoto to dictionary."""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'dropbox_path': self.dropbox_path,
+            'description': self.description,
+            'is_active': self.is_active,
+            'file_size_mb': self.file_size_mb,
+            'bbox': [self.bbox_xmin, self.bbox_ymin, self.bbox_xmax, self.bbox_ymax]
+                if all([self.bbox_xmin, self.bbox_ymin, self.bbox_xmax, self.bbox_ymax]) else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
