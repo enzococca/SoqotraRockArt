@@ -121,16 +121,21 @@
                 onEachFeature: function(feature, layer) {
                     const p = feature.properties;
 
-                    // Build images gallery HTML
+                    // Build images gallery HTML with lazy-loaded Dropbox URLs
                     let imagesHtml = '';
                     if (p.images && p.images.length > 0) {
                         imagesHtml = '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0;">';
-                        p.images.forEach(img => {
+                        p.images.forEach((img, idx) => {
+                            const thumbnailId = `thumb-${p.id}-${idx}`;
+                            const imageId = `img-${p.id}-${idx}`;
                             imagesHtml += `
                                 <div style="position: relative;">
-                                    <img src="${img.thumbnail_path}"
+                                    <img id="${thumbnailId}"
+                                         data-path="${img.thumbnail_path}"
+                                         data-fullpath="${img.image_path}"
+                                         src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23ccc' width='100' height='100'/%3E%3Ctext fill='%23666' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3ELoading...%3C/text%3E%3C/svg%3E"
                                          style="width: 100%; height: 100px; object-fit: cover; border-radius: 5px; cursor: pointer;"
-                                         onclick="window.open('${img.image_path}', '_blank')">
+                                         onclick="openImageInNewTab('${imageId}')">
                                     <a href="${img.download_url}"
                                        class="btn btn-sm btn-primary"
                                        style="position: absolute; bottom: 5px; right: 5px; padding: 2px 6px; font-size: 0.75rem;"
@@ -166,8 +171,50 @@
                         maxWidth: 450,
                         maxHeight: 600
                     });
+
+                    // Add popup open listener to lazy-load images
+                    layer.on('popupopen', function() {
+                        // Find all images with data-path attribute in the popup
+                        const popup = layer.getPopup().getElement();
+                        const images = popup.querySelectorAll('img[data-path]');
+
+                        images.forEach(img => {
+                            const thumbnailPath = img.getAttribute('data-path');
+                            const fullPath = img.getAttribute('data-fullpath');
+
+                            // Fetch Dropbox URL for thumbnail
+                            fetch(`/api/image-url?path=${encodeURIComponent(thumbnailPath)}`)
+                                .then(r => r.json())
+                                .then(data => {
+                                    if (data.url) {
+                                        img.src = data.url;
+                                        img.setAttribute('data-loaded-url', data.url);
+                                    }
+                                })
+                                .catch(err => console.error('Error loading thumbnail:', err));
+
+                            // Also fetch full image URL and store it for later use
+                            fetch(`/api/image-url?path=${encodeURIComponent(fullPath)}`)
+                                .then(r => r.json())
+                                .then(data => {
+                                    if (data.url) {
+                                        img.setAttribute('data-fullimage-url', data.url);
+                                    }
+                                })
+                                .catch(err => console.error('Error loading full image:', err));
+                        });
+                    });
                 }
             }).addTo(map);
         });
+
+    // Function to open image in new tab
+    function openImageInNewTab(imageId) {
+        const img = document.getElementById(imageId.replace('img-', 'thumb-'));
+        const fullUrl = img.getAttribute('data-fullimage-url');
+        if (fullUrl) {
+            window.open(fullUrl, '_blank');
+        }
+    }
 </script>
 {% endblock %}

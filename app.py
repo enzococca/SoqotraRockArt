@@ -1409,13 +1409,13 @@ def get_points():
 
     features = []
     for record in records:
-        # Get images for this record
+        # Get images for this record - return raw paths for lazy loading
         images_data = []
         for img in record.images[:5]:  # Limit to first 5 images for performance
             images_data.append({
                 'id': img.id,
-                'thumbnail_path': get_image_url(img.thumbnail_path),
-                'image_path': get_image_url(img.image_path),
+                'thumbnail_path': img.thumbnail_path,  # Raw path - will be converted client-side
+                'image_path': img.image_path,  # Raw path - will be converted client-side
                 'download_url': url_for('image_download', image_id=img.id, _external=False)
             })
 
@@ -1446,6 +1446,22 @@ def get_points():
     }
 
     return jsonify(geojson)
+
+
+@app.route('/api/image-url')
+def get_api_image_url():
+    """Convert image path to Dropbox URL - for lazy loading images in map popups."""
+    path = request.args.get('path', '')
+    if not path:
+        return jsonify({'error': 'No path provided'}), 400
+
+    # Use the existing get_image_url helper function
+    url = get_image_url(path)
+
+    if url:
+        return jsonify({'url': str(url)})
+    else:
+        return jsonify({'error': 'Failed to generate URL'}), 500
 
 
 @app.route('/api/cog-proxy')
