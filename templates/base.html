@@ -80,6 +80,22 @@
                             </a></li>
                         </ul>
                     </li>
+                    {% if current_user.is_admin() %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-shield-lock"></i> Admin
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('admin_users') }}">
+                                <i class="bi bi-people"></i> Manage Users
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="alert('Coming soon!'); return false;">
+                                <i class="bi bi-map"></i> Manage Orthophotos
+                            </a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
                 </ul>
                 <ul class="navbar-nav">
                     <li class="nav-item">

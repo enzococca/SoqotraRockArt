@@ -220,6 +220,92 @@ def privacy():
 
 
 # ============================================================================
+# ADMIN ROUTES (Admin-only pages)
+# ============================================================================
+
+def admin_required(f):
+    """Decorator for admin-only routes."""
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin():
+            flash('You need administrator privileges to access this page.', 'danger')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+@app.route('/admin/users')
+@login_required
+@admin_required
+def admin_users():
+    """Admin panel for managing users."""
+    users = User.query.order_by(User.created_at.desc()).all()
+    return render_template('admin_users.html', users=users)
+
+
+@app.route('/admin/users/<int:user_id>/approve', methods=['POST'])
+@login_required
+@admin_required
+def admin_approve_user(user_id):
+    """Approve a user."""
+    user = User.query.get_or_404(user_id)
+    user.is_approved = True
+    db.session.commit()
+    flash(f'User {user.username} has been approved.', 'success')
+    return redirect(url_for('admin_users'))
+
+
+@app.route('/admin/users/<int:user_id>/reject', methods=['POST'])
+@login_required
+@admin_required
+def admin_reject_user(user_id):
+    """Reject/unapprove a user."""
+    user = User.query.get_or_404(user_id)
+    user.is_approved = False
+    db.session.commit()
+    flash(f'User {user.username} has been unapproved.', 'warning')
+    return redirect(url_for('admin_users'))
+
+
+@app.route('/admin/users/<int:user_id>/role', methods=['POST'])
+@login_required
+@admin_required
+def admin_change_role(user_id):
+    """Change user role."""
+    user = User.query.get_or_404(user_id)
+    new_role = request.form.get('role')
+
+    if new_role not in ['viewer', 'editor', 'admin']:
+        flash('Invalid role.', 'danger')
+        return redirect(url_for('admin_users'))
+
+    user.role = new_role
+    db.session.commit()
+    flash(f'User {user.username} role changed to {new_role}.', 'success')
+    return redirect(url_for('admin_users'))
+
+
+@app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def admin_delete_user(user_id):
+    """Delete a user."""
+    user = User.query.get_or_404(user_id)
+
+    # Prevent deleting yourself
+    if user.id == current_user.id:
+        flash('You cannot delete your own account.', 'danger')
+        return redirect(url_for('admin_users'))
+
+    username = user.username
+    db.session.delete(user)
+    db.session.commit()
+    flash(f'User {username} has been deleted.', 'success')
+    return redirect(url_for('admin_users'))
+
+
+# ============================================================================
 # MAIN ROUTES
 # ============================================================================
 
